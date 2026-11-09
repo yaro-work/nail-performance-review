@@ -1,0 +1,17 @@
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { reviewPacket } from './reviews.mjs';
+import { readDocument } from './records.mjs';
+
+export function escapeHTML(value) { return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]); }
+export async function htmlReport(root, options = {}) {
+  const packet = await reviewPacket(root, options);
+  const goals = await readDocument(root, 'goals');
+  const e = escapeHTML;
+  const titles = new Map(goals.items.map(goal => [goal.id, goal.title]));
+  const byProject = Map.groupBy(packet.records, record => record.project);
+  const cards = [...byProject].map(([project, records]) => `<section><h2>${e(project)}</h2>${records.map(record => `<article id="${e(record.id)}"><p class="meta">${e(record.date)} · ${e(record.state)} · ${e(record.basis)}</p><h3>${e(record.contribution)}</h3><p>${e(record.outcome || 'Outcome not yet recorded.')}</p><p>Collaborators: ${e(record.collaborators.join(', ') || 'Not recorded')}</p><p>Goals: ${e(record.goals.map(goal => titles.get(goal) || goal).join(', ') || 'Not mapped')}</p>${record.metrics.map(metric => `<p>${e(metric.name)}: ${e(metric.before)} → ${e(metric.after)} ${e(metric.unit)}. Measured ${e(metric.measuredAt)}. <a href="${e(metric.source)}">Measurement source</a></p>`).join('')}<ul>${record.links.map(link => `<li><a href="${e(link)}">${e(link)}</a></li>`).join('')}</ul><p class="meta"><a href="${e(pathToFileURL(path.resolve(record.file)).href)}">Evidence ${e(record.id)}</a></p></article>`).join('')}</section>`).join('');
+  const goalSummary = goals.items.map(goal => `<li>${e(goal.title)}: ${packet.records.filter(record => record.goals.includes(goal.id)).length} linked records</li>`).join('');
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Performance record ${e(packet.start)} to ${e(packet.end)}</title><style>:root{font-family:system-ui,sans-serif;color:#18262a;background:#f3f6f4}body{max-width:960px;margin:auto;padding:clamp(16px,4vw,48px);line-height:1.6;overflow-wrap:anywhere}h1{font-size:clamp(1.8rem,5vw,3rem);line-height:1.15}h2{margin-top:2rem}h3{font-size:1.1rem}article{background:white;border:1px solid #d3ddd7;border-radius:12px;padding:20px;margin:16px 0}p,li,h3{overflow-wrap:anywhere;white-space:pre-wrap}a{color:#075a43}.meta,footer{font-size:.85rem;color:#526660}header{border-bottom:2px solid #075a43;padding-bottom:16px}@media print{body{padding:0;background:white}article{break-inside:avoid}a{color:inherit}}</style></head><body><header><p>Private performance record</p><h1>Your work, with evidence.</h1><p>${e(packet.start)} through ${e(packet.end)}</p><p>${packet.records.length} achievement records. Delivery and measured impact are shown separately.</p></header><section><h2>Goals</h2><ul>${goalSummary || '<li>No goals recorded.</li>'}</ul></section>${cards || '<p>No achievements recorded for this period.</p>'}<footer>Generated ${e(packet.generatedAt)}. Snapshot ${e(packet.fingerprint)}. Counts describe records, not performance ratings. Nothing is uploaded by this report.</footer></body></html>`;
+  return { ...packet, html };
+}

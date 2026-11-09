@@ -1,0 +1,11 @@
+{
+  "name": "nail-performance-review",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private Markdown performance records shared across AI assistants.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "bin": { "nail": "bin/nail.mjs" },
+  "scripts": { "test": "node --test tests/*.test.mjs", "evaluate": "node scripts/assistant-evaluation.mjs", "evaluate:judge": "node scripts/assistant-evaluation.mjs judge" },
+  "license": "MIT"
+}

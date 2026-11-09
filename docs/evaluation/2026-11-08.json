@@ -1,0 +1,471 @@
+{
+  "date": "2026-11-08",
+  "assistant": "gpt-6.1-sol",
+  "reasoningEffort": "medium",
+  "offlineTests": 54,
+  "mechanicalChecks": 57,
+  "scenarios": [
+    {
+      "id": "priority-choice",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "requested sandbox active",
+          "pass": true
+        },
+        {
+          "name": "assistant completed every turn",
+          "pass": true
+        },
+        {
+          "name": "assistant responded",
+          "pass": true
+        },
+        {
+          "name": "Nail SessionStart executed",
+          "pass": true
+        },
+        {
+          "name": "Nail Stop completed without extra context",
+          "pass": true
+        },
+        {
+          "name": "native SessionStart delivered Nail context",
+          "pass": true
+        },
+        {
+          "name": "active record count",
+          "pass": true
+        },
+        {
+          "name": "history record count",
+          "pass": true
+        },
+        {
+          "name": "personal contribution",
+          "pass": true
+        },
+        {
+          "name": "collaborator retained",
+          "pass": true
+        },
+        {
+          "name": "no invented measurements",
+          "pass": true
+        },
+        {
+          "name": "supporting PR retained",
+          "pass": true
+        },
+        {
+          "name": "saved evidence cited",
+          "pass": true
+        },
+        {
+          "name": "user choice saved without inventing a goal",
+          "pass": true
+        },
+        {
+          "name": "alignment asked only once",
+          "pass": true
+        },
+        {
+          "name": "routine follow-up stays quiet",
+          "pass": true
+        },
+        {
+          "name": "requested edit completed",
+          "pass": true
+        }
+      ],
+      "turns": [
+        {
+          "user": "Please document this meaningful milestone from May 10, 2026: I reviewed the internal community meetup proposal with Avery; Avery wrote it. The team accepted the proposal. Supporting link: https://example.com/pr/123. There are no measurements. This community project has no connection to my saved goal of safer releases. Do not pretend it does. Help me decide how to handle that.",
+          "assistant": "I’ll use the nail-track skill to preserve your review contribution and Avery’s authorship, then help you decide how to handle the goal mismatch.\n\nSaved [evidence 45ba23d2-c1a1-49d4-970e-2c53ab8618d8](</<local-test-run>/priority-choice/performance/years/2026/evidence/45ba23d2-c1a1-49d4-970e-2c53ab8618d8.md>) for May 10, 2026: you reviewed with Avery; Avery authored; the team accepted. Included your link, no measurements, and no goal association.\n\nI recommend keeping this as an unmatched contribution. If community work becomes an agreed priority, you can add a separate goal later. For future involvement, weigh its value against time needed for safer releases.\n\nWould you like to continue this project outside your saved goals, or discuss a separate goal with your manager?"
+        },
+        {
+          "user": "That's fine; I want to work on the community meetup anyway because I value the community. Remember that choice; do not add a goal or call this manager approval.",
+          "assistant": "I’ll save your choice to continue because you value the community, without adding a goal or marking it as manager approval.\n\nSaved your choice to continue the community meetup because you value the community. No goal was added, and this is not manager approval. I won’t repeat the alignment question for this project under your current goals."
+        },
+        {
+          "user": "Fix the spelling of \"cheklist\" in notes.md. Keep this small edit quiet about performance tracking.",
+          "assistant": "I’ll correct the spelling in notes.md.\n\nCorrected “cheklist” to “checklist” in [notes.md](notes.md)."
+        }
+      ],
+      "activeRecords": [
+        {
+          "eventId": "community-meetup-proposal-review-2026-05-10",
+          "date": "2026-05-10",
+          "project": "community-meetup",
+          "goals": [],
+          "source": "codex",
+          "state": "delivered",
+          "basis": "reported",
+          "links": [
+            "https://example.com/pr/123"
+          ],
+          "metrics": [],
+          "id": "45ba23d2-c1a1-49d4-970e-2c53ab8618d8",
+          "contribution": "I reviewed the internal community meetup proposal with Avery. Avery wrote the proposal.",
+          "outcome": "The team accepted the proposal. No measurements are available.",
+          "collaborators": [
+            "Avery"
+          ],
+          "recordedAt": "2026-11-08T22:31:57.952Z"
+        }
+      ],
+      "priorityDecisions": [
+        {
+          "schema": 1,
+          "type": "priority-decision",
+          "project": "community-meetup",
+          "action": "continue",
+          "goalsFingerprint": "045157e8f1e7dc28f3c6fa8e5aece1ef2ccbf1bdee9e54a6204446ac1f348628",
+          "recordedAt": "2026-11-08T22:32:18.828Z",
+          "body": "I want to work on the community meetup anyway because I value the community. Do not add a goal or treat this as manager approval."
+        }
+      ],
+      "reminderReceipts": [
+        {
+          "key": "community-meetup:alignment:045157e8f1e7dc28f3c6fa8e5aece1ef2ccbf1bdee9e54a6204446ac1f348628",
+          "session": "1794177089830-688a3929",
+          "at": 1794177118017
+        }
+      ],
+      "sourceHashes": {
+        "src/config.mjs": "0494562f6ebda44b4c6ff45fa13ac1cfe959286fe1e1e93b479944c6be62e67a",
+        "src/context.mjs": "583ccdfa0ed14e5aea3d57f5758ce73e57797d6bea556b94022918f19785190d",
+        "src/hooks.mjs": "9ae6c145bc1ed94f5544b6a39258fcc160392113b937c99175a9b829c5b088ff",
+        "src/install.mjs": "56245ab403b1e515bf674e2d4bae06e73c2d71727a62b46c2c04d86fd8e0ccd5",
+        "src/nudges.mjs": "41faa448843a302706ef4c85ab24df339ff9acae8478782d14ee0cf4d0ff97bc",
+        "src/records.mjs": "6f09af891f3da30e367e03e6145d7dbec5042290aa30716c2ce547809cd007a1",
+        "src/report.mjs": "dae295de59bec012daf32a4d15ae7f7f9681692cc454011991131fc9907ea44e",
+        "src/reviews.mjs": "f4e04834d5da920245097a039dcd7d7ca34be7990c0866e6fed1632324667df4",
+        "src/storage.mjs": "d738c65d5856671e4d4405f8364c6de89a45cc41fd4e7827bbe8cfe844e46e6f",
+        "bin/nail.mjs": "a75c04d554c3800e43803e18188e5bba21100269b2b78d2624cd8000d13c36fc",
+        "scripts/assistant-evaluation.mjs": "2cb847743dceac6d3e5ab32abdfe6c02e38553f963112e5d9c476a7f29571076",
+        "scripts/assistant-scenarios.mjs": "08be972c7b0f1cd344219749089fc41382ad76abca1c790764cf0b396863b8ad",
+        "docs/support-standard.md": "a2ad1c798f461e2ca997bd23d98dde17436956efda52eed9fcb010d686fe1578",
+        "skills/nail-setup/SKILL.md": "7c2ffa786aaa3bae7fef47f161d532053479541f4096ead4e2712db5d98793c9",
+        "skills/nail-track/SKILL.md": "f0e3f50b8a2f1933a3f9364f39fe9cbf729b3c740e85bd55e092eb2150de52f7",
+        "skills/nail-review/SKILL.md": "ee964a7ae87606361f306622bcf9891ebadae0d2fb829f7d64a7a0592d06e86f",
+        "skills/nail-report/SKILL.md": "afcbb006f99c8f197733f29565f22db85a0736278203e33c55ebbcf369422c0c"
+      }
+    },
+    {
+      "id": "nearing-completion",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "requested sandbox active",
+          "pass": true
+        },
+        {
+          "name": "assistant completed every turn",
+          "pass": true
+        },
+        {
+          "name": "assistant responded",
+          "pass": true
+        },
+        {
+          "name": "Nail SessionStart executed",
+          "pass": true
+        },
+        {
+          "name": "Nail Stop completed without extra context",
+          "pass": true
+        },
+        {
+          "name": "native SessionStart delivered Nail context",
+          "pass": true
+        },
+        {
+          "name": "active record count",
+          "pass": true
+        },
+        {
+          "name": "history record count",
+          "pass": true
+        },
+        {
+          "name": "personal contribution",
+          "pass": true
+        },
+        {
+          "name": "collaborator retained",
+          "pass": true
+        },
+        {
+          "name": "no invented measurements",
+          "pass": true
+        },
+        {
+          "name": "supporting PR retained",
+          "pass": true
+        },
+        {
+          "name": "saved evidence cited",
+          "pass": true
+        },
+        {
+          "name": "eligible outcomes reminder used",
+          "pass": true
+        },
+        {
+          "name": "requested edit completed",
+          "pass": true
+        }
+      ],
+      "turns": [
+        {
+          "user": "Update release-notes.md: the service migration is almost finished, with the final production rollout accepted on May 10, 2026. My contribution was reviewing the rollout checklist with Avery, who built the service. PR: https://example.com/pr/123. This supports safer releases. No before-and-after measurements have been collected.",
+          "assistant": "I’ll update the release notes and use the nail-track skill to record your checklist review with Avery, keeping the contribution and missing measurements explicit.\n\nUpdated [release-notes.md](release-notes.md) with the acceptance date, your checklist review, Avery’s role, PR link, and missing measurements. Saved evidence `6cf8fa3b-946a-480d-9f65-eeaeb0e979eb` in the private performance record.\n\nWhich outcomes should be collected to assess safer releases—for example, rollback frequency, release incidents, or reviewer feedback?"
+        }
+      ],
+      "activeRecords": [
+        {
+          "eventId": "service-migration-rollout-2026-05-10",
+          "date": "2026-05-10",
+          "project": "service-migration",
+          "goals": [
+            "reliability"
+          ],
+          "source": "codex",
+          "state": "in-progress",
+          "basis": "reported",
+          "links": [
+            "https://example.com/pr/123"
+          ],
+          "metrics": [],
+          "id": "6cf8fa3b-946a-480d-9f65-eeaeb0e979eb",
+          "contribution": "I reviewed the rollout checklist with Avery, who built the service.",
+          "outcome": "The service migration is almost finished, with the final production rollout accepted on May 10, 2026. This supports safer releases; no before-and-after measurements have been collected and measured impact is unknown.",
+          "collaborators": [
+            "Avery"
+          ],
+          "recordedAt": "2026-11-08T22:33:12.181Z"
+        }
+      ],
+      "priorityDecisions": [],
+      "reminderReceipts": [
+        {
+          "key": "service-migration:outcomes:045157e8f1e7dc28f3c6fa8e5aece1ef2ccbf1bdee9e54a6204446ac1f348628",
+          "session": "1794177089830-688a3929",
+          "at": 1794177192249
+        }
+      ],
+      "sourceHashes": {
+        "src/config.mjs": "0494562f6ebda44b4c6ff45fa13ac1cfe959286fe1e1e93b479944c6be62e67a",
+        "src/context.mjs": "583ccdfa0ed14e5aea3d57f5758ce73e57797d6bea556b94022918f19785190d",
+        "src/hooks.mjs": "9ae6c145bc1ed94f5544b6a39258fcc160392113b937c99175a9b829c5b088ff",
+        "src/install.mjs": "56245ab403b1e515bf674e2d4bae06e73c2d71727a62b46c2c04d86fd8e0ccd5",
+        "src/nudges.mjs": "41faa448843a302706ef4c85ab24df339ff9acae8478782d14ee0cf4d0ff97bc",
+        "src/records.mjs": "6f09af891f3da30e367e03e6145d7dbec5042290aa30716c2ce547809cd007a1",
+        "src/report.mjs": "dae295de59bec012daf32a4d15ae7f7f9681692cc454011991131fc9907ea44e",
+        "src/reviews.mjs": "f4e04834d5da920245097a039dcd7d7ca34be7990c0866e6fed1632324667df4",
+        "src/storage.mjs": "d738c65d5856671e4d4405f8364c6de89a45cc41fd4e7827bbe8cfe844e46e6f",
+        "bin/nail.mjs": "a75c04d554c3800e43803e18188e5bba21100269b2b78d2624cd8000d13c36fc",
+        "scripts/assistant-evaluation.mjs": "2cb847743dceac6d3e5ab32abdfe6c02e38553f963112e5d9c476a7f29571076",
+        "scripts/assistant-scenarios.mjs": "08be972c7b0f1cd344219749089fc41382ad76abca1c790764cf0b396863b8ad",
+        "docs/support-standard.md": "a2ad1c798f461e2ca997bd23d98dde17436956efda52eed9fcb010d686fe1578",
+        "skills/nail-setup/SKILL.md": "7c2ffa786aaa3bae7fef47f161d532053479541f4096ead4e2712db5d98793c9",
+        "skills/nail-track/SKILL.md": "f0e3f50b8a2f1933a3f9364f39fe9cbf729b3c740e85bd55e092eb2150de52f7",
+        "skills/nail-review/SKILL.md": "ee964a7ae87606361f306622bcf9891ebadae0d2fb829f7d64a7a0592d06e86f",
+        "skills/nail-report/SKILL.md": "afcbb006f99c8f197733f29565f22db85a0736278203e33c55ebbcf369422c0c"
+      }
+    },
+    {
+      "id": "small-edit",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "requested sandbox active",
+          "pass": true
+        },
+        {
+          "name": "assistant completed every turn",
+          "pass": true
+        },
+        {
+          "name": "assistant responded",
+          "pass": true
+        },
+        {
+          "name": "Nail SessionStart executed",
+          "pass": true
+        },
+        {
+          "name": "Nail Stop completed without extra context",
+          "pass": true
+        },
+        {
+          "name": "native SessionStart delivered Nail context",
+          "pass": true
+        },
+        {
+          "name": "active record count",
+          "pass": true
+        },
+        {
+          "name": "history record count",
+          "pass": true
+        },
+        {
+          "name": "no performance interruption",
+          "pass": true
+        },
+        {
+          "name": "requested edit completed",
+          "pass": true
+        }
+      ],
+      "turns": [
+        {
+          "user": "Fix the spelling of \"cheklist\" in notes.md.",
+          "assistant": "I’ll check the workspace and correct the spelling in `notes.md`.\n\nCorrected “cheklist” to “checklist” in [notes.md](notes.md)."
+        }
+      ],
+      "activeRecords": [],
+      "priorityDecisions": [],
+      "reminderReceipts": [],
+      "sourceHashes": {
+        "src/config.mjs": "0494562f6ebda44b4c6ff45fa13ac1cfe959286fe1e1e93b479944c6be62e67a",
+        "src/context.mjs": "583ccdfa0ed14e5aea3d57f5758ce73e57797d6bea556b94022918f19785190d",
+        "src/hooks.mjs": "9ae6c145bc1ed94f5544b6a39258fcc160392113b937c99175a9b829c5b088ff",
+        "src/install.mjs": "56245ab403b1e515bf674e2d4bae06e73c2d71727a62b46c2c04d86fd8e0ccd5",
+        "src/nudges.mjs": "41faa448843a302706ef4c85ab24df339ff9acae8478782d14ee0cf4d0ff97bc",
+        "src/records.mjs": "6f09af891f3da30e367e03e6145d7dbec5042290aa30716c2ce547809cd007a1",
+        "src/report.mjs": "dae295de59bec012daf32a4d15ae7f7f9681692cc454011991131fc9907ea44e",
+        "src/reviews.mjs": "f4e04834d5da920245097a039dcd7d7ca34be7990c0866e6fed1632324667df4",
+        "src/storage.mjs": "d738c65d5856671e4d4405f8364c6de89a45cc41fd4e7827bbe8cfe844e46e6f",
+        "bin/nail.mjs": "a75c04d554c3800e43803e18188e5bba21100269b2b78d2624cd8000d13c36fc",
+        "scripts/assistant-evaluation.mjs": "2cb847743dceac6d3e5ab32abdfe6c02e38553f963112e5d9c476a7f29571076",
+        "scripts/assistant-scenarios.mjs": "08be972c7b0f1cd344219749089fc41382ad76abca1c790764cf0b396863b8ad",
+        "docs/support-standard.md": "a2ad1c798f461e2ca997bd23d98dde17436956efda52eed9fcb010d686fe1578",
+        "skills/nail-setup/SKILL.md": "7c2ffa786aaa3bae7fef47f161d532053479541f4096ead4e2712db5d98793c9",
+        "skills/nail-track/SKILL.md": "f0e3f50b8a2f1933a3f9364f39fe9cbf729b3c740e85bd55e092eb2150de52f7",
+        "skills/nail-review/SKILL.md": "ee964a7ae87606361f306622bcf9891ebadae0d2fb829f7d64a7a0592d06e86f",
+        "skills/nail-report/SKILL.md": "afcbb006f99c8f197733f29565f22db85a0736278203e33c55ebbcf369422c0c"
+      }
+    },
+    {
+      "id": "still-in-progress",
+      "status": "pass",
+      "checks": [
+        {
+          "name": "requested sandbox active",
+          "pass": true
+        },
+        {
+          "name": "assistant completed every turn",
+          "pass": true
+        },
+        {
+          "name": "assistant responded",
+          "pass": true
+        },
+        {
+          "name": "Nail SessionStart executed",
+          "pass": true
+        },
+        {
+          "name": "Nail Stop completed without extra context",
+          "pass": true
+        },
+        {
+          "name": "native SessionStart delivered Nail context",
+          "pass": true
+        },
+        {
+          "name": "active record count",
+          "pass": true
+        },
+        {
+          "name": "history record count",
+          "pass": true
+        },
+        {
+          "name": "personal contribution",
+          "pass": true
+        },
+        {
+          "name": "collaborator retained",
+          "pass": true
+        },
+        {
+          "name": "no invented measurements",
+          "pass": true
+        },
+        {
+          "name": "supporting PR retained",
+          "pass": true
+        },
+        {
+          "name": "saved evidence cited",
+          "pass": true
+        },
+        {
+          "name": "unfinished project has no outcomes prompt",
+          "pass": true
+        },
+        {
+          "name": "requested edit completed",
+          "pass": true
+        }
+      ],
+      "turns": [
+        {
+          "user": "Update release-notes.md with this staging milestone from May 10, 2026: I reviewed the first service rollout checklist with Avery, who built the service. PR: https://example.com/pr/123. This supports safer releases. The overall migration is NOT nearly finished: many services remain and we have weeks of implementation left. Keep this in progress. No measurements exist yet.",
+          "assistant": "I’ll update the release notes and use the nail-track skill to record your checklist review as an in-progress milestone, with Avery’s contribution preserved and no measured impact claimed.\n\nUpdated [release-notes.md](release-notes.md) with the May 10 milestone, your review contribution, Avery’s service ownership, and the PR link. The migration remains **in progress**, with weeks of implementation left and no measurements.\n\nSaved private evidence `00fd41c1-d9ba-4dab-88e2-95ec37507056` in [the performance record](../performance/years/2026/evidence/00fd41c1-d9ba-4dab-88e2-95ec37507056.md)."
+        }
+      ],
+      "activeRecords": [
+        {
+          "eventId": "migration-checklist-review-2026-05-10-pr-123",
+          "date": "2026-05-10",
+          "project": "migration",
+          "goals": [
+            "reliability"
+          ],
+          "source": "codex",
+          "state": "in-progress",
+          "basis": "reported",
+          "links": [
+            "https://example.com/pr/123"
+          ],
+          "metrics": [],
+          "id": "00fd41c1-d9ba-4dab-88e2-95ec37507056",
+          "contribution": "I reviewed the first service rollout checklist with Avery, who built the service.",
+          "outcome": "Staging milestone supporting safer releases. The overall migration remains in progress: many services remain and weeks of implementation are left. No measurements exist yet.",
+          "collaborators": [
+            "Avery"
+          ],
+          "recordedAt": "2026-11-08T22:36:58.842Z"
+        }
+      ],
+      "priorityDecisions": [],
+      "reminderReceipts": [],
+      "sourceHashes": {
+        "src/config.mjs": "0494562f6ebda44b4c6ff45fa13ac1cfe959286fe1e1e93b479944c6be62e67a",
+        "src/context.mjs": "583ccdfa0ed14e5aea3d57f5758ce73e57797d6bea556b94022918f19785190d",
+        "src/hooks.mjs": "9ae6c145bc1ed94f5544b6a39258fcc160392113b937c99175a9b829c5b088ff",
+        "src/install.mjs": "56245ab403b1e515bf674e2d4bae06e73c2d71727a62b46c2c04d86fd8e0ccd5",
+        "src/nudges.mjs": "41faa448843a302706ef4c85ab24df339ff9acae8478782d14ee0cf4d0ff97bc",
+        "src/records.mjs": "6f09af891f3da30e367e03e6145d7dbec5042290aa30716c2ce547809cd007a1",
+        "src/report.mjs": "dae295de59bec012daf32a4d15ae7f7f9681692cc454011991131fc9907ea44e",
+        "src/reviews.mjs": "f4e04834d5da920245097a039dcd7d7ca34be7990c0866e6fed1632324667df4",
+        "src/storage.mjs": "d738c65d5856671e4d4405f8364c6de89a45cc41fd4e7827bbe8cfe844e46e6f",
+        "bin/nail.mjs": "36aa5e99d197300db3840940394f7c073059903f35eda15992b800197641d019",
+        "scripts/assistant-evaluation.mjs": "1c586a1e368da21698aaa40ad74c7eabe901e5f87a195372d4c285fc7bfd4435",
+        "scripts/assistant-scenarios.mjs": "94e6f29a74a039746c018bdf1c8c9819a12cb2d726e5c34fc82d142659037346",
+        "docs/support-standard.md": "a2ad1c798f461e2ca997bd23d98dde17436956efda52eed9fcb010d686fe1578",
+        "skills/nail-setup/SKILL.md": "7c2ffa786aaa3bae7fef47f161d532053479541f4096ead4e2712db5d98793c9",
+        "skills/nail-track/SKILL.md": "f0e3f50b8a2f1933a3f9364f39fe9cbf729b3c740e85bd55e092eb2150de52f7",
+        "skills/nail-review/SKILL.md": "ee964a7ae87606361f306622bcf9891ebadae0d2fb829f7d64a7a0592d06e86f",
+        "skills/nail-report/SKILL.md": "afcbb006f99c8f197733f29565f22db85a0736278203e33c55ebbcf369422c0c"
+      }
+    }
+  ],
+  "localPathsRedacted": true
+}

@@ -1,0 +1,7 @@
+{
+  "name": "nail-performance-review",
+  "version": "0.1.0",
+  "description": "Track goals, contributions, and review evidence in a shared private Markdown directory.",
+  "skills": "./skills/",
+  "hooks": "./adapters/codex/hooks.json"
+}

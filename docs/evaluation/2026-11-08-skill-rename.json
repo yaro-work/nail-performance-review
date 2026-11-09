@@ -1,0 +1,92 @@
+{
+  "date": "2026-11-08",
+  "assistant": "gpt-6.1-sol",
+  "reasoningEffort": "medium",
+  "offlineTests": 61,
+  "status": "pass",
+  "checks": [
+    {
+      "name": "requested sandbox active",
+      "pass": true
+    },
+    {
+      "name": "assistant completed every turn",
+      "pass": true
+    },
+    {
+      "name": "assistant responded",
+      "pass": true
+    },
+    {
+      "name": "Nail SessionStart executed",
+      "pass": true
+    },
+    {
+      "name": "Nail Stop completed without extra context",
+      "pass": true
+    },
+    {
+      "name": "active record count",
+      "pass": true
+    },
+    {
+      "name": "history record count",
+      "pass": true
+    },
+    {
+      "name": "personal contribution",
+      "pass": true
+    },
+    {
+      "name": "collaborator retained",
+      "pass": true
+    },
+    {
+      "name": "no invented measurements",
+      "pass": true
+    },
+    {
+      "name": "supporting PR retained",
+      "pass": true
+    },
+    {
+      "name": "saved evidence cited",
+      "pass": true
+    }
+  ],
+  "renamedSetupRead": {
+    "path": ".agents/skills/nail-performance-review-setup/SKILL.md",
+    "exitCode": 0,
+    "frontmatterNameVerified": true
+  },
+  "turns": [
+    {
+      "user": "Help me start tracking my achievements for my performance review.",
+      "assistant": "I’ll use the performance-review setup skill to check for an existing record and help you start tracking achievements.\n\nTo get started, tell me:\n\n- Your role and current level, if applicable.\n- The review period you’re preparing for.\n- Your agreed goals, or a goals document. If you don’t have these yet, we can mark them as provisional.\n\nI’ll store your private notes in `<test-run>\\getting-started\\performance`.\n\nYou can also share one recent achievement: what you personally did and what happened. Rough notes are fine; measurements can wait."
+    },
+    {
+      "user": "I am a senior engineer. My review covers January through December 2026. My goal is safer releases. Keep the notes in <test-run>\\getting-started\\performance. On May 10 I reviewed Avery's migration rollout plan. Avery designed the plan and built the service. We shipped together. The supporting PR is https://example.com/pr/123. We have no before-and-after measurements. Please save that achievement.",
+      "assistant": "I’ll save your role, review period, and safer-releases goal, then record your review of Avery’s plan with the personal and shared contributions kept clear.\n\nSaved your senior engineer profile, January–December 2026 review period, safer-releases goal, and [May 10 achievement](</<test-run>/getting-started/performance/years/2026/evidence/59b82eb8-bd67-473d-84bf-8f51d69cfb70.md>).\n\nThe achievement credits you with reviewing the plan, Avery with designing it and building the service, and both of you with shipping. It includes the PR link and leaves measurements empty. Validation passed.\n\nEvidence ID: `59b82eb8-bd67-473d-84bf-8f51d69cfb70`\n\nNotes folder: `<test-run>\\getting-started\\performance`\n\nNext useful addition: any specific risk or change you identified during your review."
+    }
+  ],
+  "sourceHashes": {
+    "src/config.mjs": "0494562f6ebda44b4c6ff45fa13ac1cfe959286fe1e1e93b479944c6be62e67a",
+    "src/context.mjs": "37923152478c1cba85ecc548f49c3d7c3d8021b9c4946bba0de7768b6bf5fec3",
+    "src/hooks.mjs": "d5a8ac87ed877c5f38cea10651900ea60562ecbb58816f703a02deff496c69b3",
+    "src/install.mjs": "ecc42da663cd5268c986f240824a5da50087a3b87dbc32c2ea491e805c13dd57",
+    "src/nudges.mjs": "41faa448843a302706ef4c85ab24df339ff9acae8478782d14ee0cf4d0ff97bc",
+    "src/records.mjs": "6f09af891f3da30e367e03e6145d7dbec5042290aa30716c2ce547809cd007a1",
+    "src/report.mjs": "dae295de59bec012daf32a4d15ae7f7f9681692cc454011991131fc9907ea44e",
+    "src/reviews.mjs": "f4e04834d5da920245097a039dcd7d7ca34be7990c0866e6fed1632324667df4",
+    "src/storage.mjs": "d738c65d5856671e4d4405f8364c6de89a45cc41fd4e7827bbe8cfe844e46e6f",
+    "bin/nail.mjs": "36aa5e99d197300db3840940394f7c073059903f35eda15992b800197641d019",
+    "scripts/assistant-evaluation.mjs": "9863d71e36d8655d4841a6e9f5bd634c9ede379627c302505487551516555270",
+    "scripts/assistant-scenarios.mjs": "94e6f29a74a039746c018bdf1c8c9819a12cb2d726e5c34fc82d142659037346",
+    "docs/support-standard.md": "a2ad1c798f461e2ca997bd23d98dde17436956efda52eed9fcb010d686fe1578",
+    "skills/nail-performance-review-setup/SKILL.md": "c97f6409b13ce1a79874b47aa18bf7340cfbcd06f843487f56d0c92d64b2385f",
+    "skills/nail-performance-review-track/SKILL.md": "6507b352d1b58fbb642e9959e3b8377d639b7aaa9611ca381a1fc1a9325d388c",
+    "skills/nail-performance-review-review/SKILL.md": "530a9fb3be9ed41c8f88a1c9fc65b932c142ee7765a34991cb10882e51da4a1b",
+    "skills/nail-performance-review-report/SKILL.md": "d399c49884dcb18af05b5bff15a973996ddcf9f3a71f1ad3aa7955515d69d45c"
+  },
+  "localPathsRedacted": true
+}

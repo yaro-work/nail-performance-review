@@ -1,0 +1,10 @@
+.scratch/
+.test-data/
+.nail.json
+node_modules/
+coverage/
+*.tmp
+
+/AGENTS.md
+/PROJECT_STATE.md
+/.local/
