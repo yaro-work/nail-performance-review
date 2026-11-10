@@ -25,7 +25,7 @@ Just using AI at the end of the year isn’t enough. Chats can disappear, docume
 |---|---|
 | 1. Start | Install the plugin, then say **“Help me set up my performance record.”** You can also choose `nail-performance-review-setup` from your AI tool’s skill menu. |
 | 2. Give it some context | Start with your role, review period, and goals. Upload files or paste the text. Add development goals, promotion interests, your company’s career ladder, past reviews, or manager feedback when you have them. You don’t need all of these to begin. Use only information you’re authorized to store and share with your AI provider. |
-| 3. Keep working | In a configured local AI tool, the plugin guides your AI chat to record real milestones as in-progress achievements. Planning alone isn’t saved as an achievement; you need to start making real progress. You can also say **“Record what we achieved.”** |
+| 3. Keep working | In an enabled workspace, your AI can save quick fixes, useful findings, and work in progress to a private inbox. Later, choose what to include in your review. You can also say **“Record what we achieved.”** |
 | 4. Check your priorities | Your AI chat checks the project against your saved yearly goals. If nothing matches, it asks whether you want to connect it to a goal, add an agreed goal, or work on it anyway. If it doesn’t benefit your priorities, is it something you want to spend your time on? |
 | 5. Collect the impact | When the work in your chat suggests the project is nearly finished, your AI chat considers whether there are useful KPIs, before-and-after measurements, or feedback to collect. If the shared reminder limit allows, it asks what to collect and saves results with supporting links. |
 | 6. Help with your growth | As a project wraps up, your AI chat checks your development goals and company expectations. It might suggest a broader demo, documentation, or applying the learning to another project. |
@@ -93,7 +93,7 @@ Choose **User** scope, open a new chat, and say **“Help me set up my performan
 
 Open a new chat in that project after completing any [hook trust steps](docs/install.md#connect-an-ai-tool). For more details or to turn tracking off, see the [installation guide](docs/install.md#enable-automatic-tracking-for-a-workspace).
 
-Try it with a real milestone. For example, tell your AI that you finished a readiness review and describe what you contributed. Look for a saved achievement. If it misses one, say **“Save this to my performance record.”** Use the [tracking checks](docs/install.md#check-automatic-tracking) if it keeps missing milestones.
+Try it with real work. A quick fix, a useful diagnosis, or work you’ve started can go into your private inbox, even without a measured outcome. Ask **“Show my saved candidates.”** Choose what to include in your review or leave out. If your AI missed something, say **“Save this to my performance record.”** [Tracking checks](docs/install.md#check-automatic-tracking)
 
 ### Use your goals and one-on-one notes
 

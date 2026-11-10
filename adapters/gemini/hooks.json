@@ -1,5 +1,6 @@
 {
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "name": "nail-performance-review-SessionStart", "type": "command", "command": "node \"${extensionPath}/bin/nail.mjs\" hook --target gemini --event SessionStart", "timeout": 5000 }] }]
+    "SessionStart": [{ "hooks": [{ "name": "nail-performance-review-SessionStart", "type": "command", "command": "node \"${extensionPath}/bin/nail.mjs\" hook --target gemini --event SessionStart", "timeout": 5000 }] }],
+    "BeforeAgent": [{ "hooks": [{ "name": "nail-performance-review-BeforeAgent", "type": "command", "command": "node \"${extensionPath}/bin/nail.mjs\" hook --target gemini --event BeforeAgent", "timeout": 5000 }] }]
   }
 }

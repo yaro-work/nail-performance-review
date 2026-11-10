@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, createHash } from 'node:crypto';
 import { resolveRoot, readConfig, setTracking, trackingRoot, trackingStatus } from '../src/config.mjs';
-import { initRecord, saveEvidence, updateDocument, doctor, exportBundle, importBundle } from '../src/records.mjs';
+import { initRecord, listEvidence, saveEvidence, triageEvidence, updateDocument, doctor, exportBundle, importBundle } from '../src/records.mjs';
 import { getContext } from '../src/context.mjs';
 import { nudge } from '../src/nudges.mjs';
 import { reviewPacket, period } from '../src/reviews.mjs';
@@ -15,7 +15,7 @@ import { install, uninstall, inspectInstallations, updateInstallations } from '.
 import { runHook } from '../src/hooks.mjs';
 import { claimManagerRefresh, completeManagerRefresh, configureManagerSource, pauseManagerRefresh, readManagerSource } from '../src/manager-source.mjs';
 
-const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable [--name RECORD] | --disable | --status  Control automatic workspace tracking\n  manager-source                Check manager document setup and refresh status\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--dry-run]             Refresh all managed adapters from this checkout\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
+const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable [--name RECORD] | --disable | --status  Control automatic workspace tracking\n  inbox [--period YYYY]         List achievements awaiting review\n  triage --id ID --action include|exclude\n  manager-source                Check manager document setup and refresh status\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--dry-run]             Refresh all managed adapters from this checkout\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
 
 async function inputJSON() {
   let text = '';
@@ -37,7 +37,7 @@ async function main() {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: Object.fromEntries([
-      ...['root', 'name', 'cwd', 'role', 'timezone', 'level', 'start', 'end', 'period', 'project', 'session', 'reason', 'action', 'note', 'days', 'target', 'event', 'output', 'input'].map(key => [key, { type: 'string' }]),
+      ...['root', 'name', 'cwd', 'role', 'timezone', 'level', 'start', 'end', 'period', 'project', 'session', 'reason', 'action', 'note', 'days', 'target', 'event', 'output', 'input', 'id'].map(key => [key, { type: 'string' }]),
       ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'status', 'claim', 'checked', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
     ]),
   });
@@ -131,6 +131,11 @@ async function main() {
       result = ['record', 'amend'].includes(command) ? await saveEvidence(root, input, { amendment: command === 'amend' }) : await updateDocument(root, command, input);
     } else if (command === 'context') return console.log(await getContext(root, options));
     else if (command === 'nudge') result = await nudge(root, options);
+    else if (command === 'inbox') {
+      if (options.action && !['candidate', 'excluded'].includes(options.action)) throw new Error('Use inbox or inbox --action excluded.');
+      const evidence = await listEvidence(root, await period(root, options));
+      result = evidence.filter(record => record.reviewStatus === (options.action || 'candidate'));
+    } else if (command === 'triage') result = await triageEvidence(root, options.id, options.action);
     else if (command === 'doctor') {
       result = { ...await doctor(root), installations: await inspectInstallations(options), configuration: await readConfig(options) };
       try { await readManagerSource(root); } catch (error) { result.errors.push(`Manager source: ${error.message}`); }

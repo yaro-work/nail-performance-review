@@ -55,28 +55,28 @@ test('end hooks never retry, block, or ingest a supplied transcript', async (t) 
   assert.equal((await readFile(path.join(options.root, 'profile.md'), 'utf8')).includes('million dollars'), false);
 });
 
-test('Claude checks current milestone reports without copying prompts, blocking, or broadening opt-in', async t => {
-  const options = await setup(t);
-  const check = (prompt, extra = {}) => runHook('claude', 'UserPromptSubmit',
-    { cwd: options.workspace, prompt, transcript_path: 'never-read.jsonl', ...extra }, options);
-  const review = 'Readiness review for private-project is done. I identified two blockers.';
-  assert.deepEqual(await check(review), {});
-  await setTracking({ ...options, cwd: options.workspace, enable: true });
-  for (const prompt of [review, 'I helped another team find the root cause and they fixed it.']) {
+for (const [target, event] of [['claude', 'UserPromptSubmit'], ['codex', 'UserPromptSubmit'], ['gemini', 'BeforeAgent']]) {
+  test(`${target} reminds on ordinary work prompts without copying prompt text or widening opt-in`, async t => {
+    const options = await setup(t);
+    const check = (prompt, extra = {}) => runHook(target, event, {
+      cwd: options.workspace, prompt, session_id: 'opaque-session-id', transcript_path: 'never-read.jsonl', ...extra,
+    }, options);
+    const prompt = 'Why is private-project failing only in staging?';
+    assert.deepEqual(await check(prompt), {});
+    await setTracking({ ...options, cwd: options.workspace, enable: true });
     const result = await check(prompt);
     assert.deepEqual(Object.keys(result), ['hookSpecificOutput']);
-    assert.equal(result.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
-    assert.match(result.hookSpecificOutput.additionalContext, /before the final reply/i);
-    assert.doesNotMatch(JSON.stringify(result), /private-project|two blockers|never-read/);
-  }
-  for (const prompt of ['How does the readiness probe work?', 'Write a birthday message.', '/done', null]) {
+    assert.equal(result.hookSpecificOutput.hookEventName, event);
+    assert.match(result.hookSpecificOutput.additionalContext, /quick fix or diagnosis.*sessionId.*opaque-session-id/);
+    assert.doesNotMatch(JSON.stringify(result), /private-project|staging|never-read/);
+    assert.doesNotMatch(JSON.stringify(await check(prompt, { session_id: '/private/path' })), /private\/path/);
+    for (const invalid of ['/done', '  ', null]) assert.deepEqual(await check(invalid), {});
+    assert.deepEqual(await check(prompt, { permission_mode: 'plan' }), {});
+    assert.deepEqual(await check(prompt, { workspace_roots: [options.workspace] }), {});
+    await setTracking({ ...options, cwd: options.workspace, enable: false });
     assert.deepEqual(await check(prompt), {});
-  }
-  assert.deepEqual(await check(review, { permission_mode: 'plan' }), {});
-  assert.deepEqual(await check(review, { workspace_roots: [options.workspace] }), {});
-  await setTracking({ ...options, cwd: options.workspace, enable: false });
-  assert.deepEqual(await check(review), {});
-});
+  });
+}
 
 test('tracking status distinguishes an exact opted-in folder from a subfolder', async t => {
   const options = await setup(t);

@@ -90,7 +90,7 @@ Gemini CLI 0.67.0 could not start the cross-tool correction scenario. Its accoun
 
 The fixture directory was also untrusted. No trust settings were changed, and no Gemini correction was saved. Its adapter format remains covered by automated tests.
 
-Those earlier sessions verified explicitly requested capture. The earlier repeatable evaluation observed implicit capture and both lifecycle hooks in Codex. The current adapter uses only startup and sends no record data at startup. Persistent trust onboarding and capture completeness remain unverified.
+Those earlier sessions verified explicitly requested capture. The earlier repeatable evaluation observed implicit capture in Codex. The current adapter sends a short instruction and an opaque session ID in enabled workspaces. A hook receipt shows that the instruction ran. Check the saved record to verify capture.
 
 ## Reproduce the checks
 

@@ -1,5 +1,17 @@
 export const scenarios = [
   {
+    id: 'quick-diagnosis',
+    files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false},"production":{"cache":"normal","refreshOnSave":true}}' },
+    turns: ['Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.'],
+    expected: { active: 1, history: 1, contribution: 'staging', metrics: 0, link: false, candidate: 'delivered', quiet: true },
+  },
+  {
+    id: 'task-started',
+    files: { 'rollout.md': '# Service migration\n' },
+    turns: ['Start the rollout work by adding a draft rollback verification checklist to rollout.md. The migration is still in progress and this is the first part of implementation.'],
+    expected: { active: 1, history: 1, contribution: 'rollback', metrics: 0, link: false, candidate: 'in-progress', file: 'rollout.md', fileIncludes: 'rollback' },
+  },
+  {
     id: 'still-in-progress',
     turns: ['Update release-notes.md with this staging milestone from May 10, 2026: I reviewed the first service rollout checklist with Avery, who built the service. PR: https://example.com/pr/123. This supports safer releases. The overall migration is NOT nearly finished: many services remain and we have weeks of implementation left. Keep this in progress. No measurements exist yet.'],
     files: { 'release-notes.md': '# Migration\n\nRelease notes pending.\n' },
@@ -60,7 +72,7 @@ export const scenarios = [
     id: 'reported-cross-team-help',
     files: { 'notes.md': '# Incident notes\n' },
     turns: ['Add one sentence to notes.md. On May 10, 2026, I helped the Games team find the root cause of an existing production incident and they fixed it. This work is outside my saved safer releases goal. Evidence: https://example.com/pr/123.'],
-    expected: { active: 1, history: 1, contribution: 'root cause', collaborator: 'Games', metrics: 0, goalIds: [], alignment: true, file: 'notes.md', fileIncludes: 'Games' },
+    expected: { active: 1, history: 1, contribution: 'root cause', collaborator: 'Games', metrics: 0, goalIds: [], file: 'notes.md', fileIncludes: 'Games' },
   },
   {
     id: 'fictional-milestone',
