@@ -49,7 +49,7 @@ The plugin doesn’t require an extra AI subscription. Use it with your current 
 
 **Prefer help from your AI?** Give this README or repository link to your local AI coding tool and paste:
 
-> Install nail-performance-review from https://github.com/yaro-work/nail-performance-review for the AI tools I use. Check whether Git and Node.js 22 or later are installed, and help me install missing prerequisites from their official sites. Keep my performance notes outside this repository, preserve my existing settings, and explain any trust steps I need to complete. Then help me set up my first goal and achievement.
+> Install nail-performance-review from https://github.com/yaro-work/nail-performance-review for the AI tools I use. Check whether Git and Node.js 22 or later are installed, and help me install missing prerequisites from their official sites. Keep my performance notes outside this repository, preserve my existing settings, and explain any trust steps I need to complete. Help me set up my first goal and achievement. Then ask if I want automatic tracking. If I say yes, confirm the project folder and record before enabling it.
 
 **Prefer a few commands?** Install [Git](https://git-scm.com/downloads/) and [Node.js LTS, version 22 or later](https://nodejs.org/en/download) if you don’t have them. Node.js is the program that runs this plugin. Reopen your terminal after installation.
 
@@ -72,9 +72,18 @@ The plugin doesn’t require an extra AI subscription. Use it with your current 
 
 3. Run `node bin/nail.mjs doctor`. Complete your AI tool’s [trust or enablement steps](docs/install.md#connect-an-ai-tool), then start a new chat and say **“Help me set up my performance record.”**
 
-For another notes folder, multiple employers, upgrades, or uninstalling, see the [installation guide](docs/install.md).
+### Enable automatic tracking
 
-Automatic tracking is opt-in per workspace. The startup hook sends a short instruction and leaves your record on disk until your AI chat requests tracking context. See [how to enable it](docs/install.md#enable-automatic-tracking-for-a-workspace) or install with `--skills-only` for manual use.
+**Want your AI to save milestones as you work?** Enable automatic tracking for the project folder you open in your AI tool. Otherwise, you can still ask your AI to save a milestone whenever you want.
+
+- **In chat:** Say **“Enable automatic tracking for this project.”** Confirm the project folder and the record you want to use.
+- **In a terminal:** From the Nail clone, run the command below. Replace the example path with your project folder and `work` with your record name if you chose a different one.
+
+  ```sh
+  node bin/nail.mjs tracking --enable --name work --cwd "/absolute/path/to/project"
+  ```
+
+Open a new chat in that project after completing any [hook trust steps](docs/install.md#connect-an-ai-tool). For more details or to turn tracking off, see the [installation guide](docs/install.md#enable-automatic-tracking-for-a-workspace).
 
 ## Prepare a review
 

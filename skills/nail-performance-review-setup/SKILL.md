@@ -1,6 +1,6 @@
 ---
 name: nail-performance-review-setup
-description: Set up or revise a private nail-performance-review record when someone wants to track goals, achievements, or a review cycle across AI tools.
+description: Set up a private nail-performance-review record, revise goals or a review cycle, or enable automatic tracking for a project.
 ---
 
 # Set up a performance record
@@ -8,6 +8,8 @@ description: Set up or revise a private nail-performance-review record when some
 Use the installed nail-performance-review CLI at `{{NAIL_PACKAGE_ROOT}}/bin/nail.mjs`. If that placeholder is unresolved, find the package root two directories above this skill file. Run commands through Node and quote paths containing spaces.
 
 Respect the host's plan or read-only mode. In those modes, propose the setup without writing files.
+
+If the user only asks to enable automatic tracking for an existing record, go straight to the workspace and record confirmation below.
 
 Start with three questions, using existing answers when available:
 
@@ -26,6 +28,10 @@ Use `profile`, `goals`, and `project` with validated JSON input. Read `{{NAIL_PA
 When the user supplies a first achievement, create its project and save it with `record --stdin` using that record format. Keep this first capture within setup; do not load nail-performance-review-track just for it. Separate personal credit, collaborators, and team results. Leave unknown measurements empty.
 
 Use one brief progress update for the setup turn and a short receipt after saving. Avoid another introduction when moving from profile setup to achievement capture.
+
+Once the record is ready, make automatic tracking a separate, visible choice before asking optional career questions. Ask once: **“Enable automatic tracking for a project? I can save meaningful milestones from your work chats there without you asking each time.”** If the user already chose, respect that choice. If they decline or defer, keep manual tracking available and move on.
+
+Before enabling, confirm the exact project folder they open in their AI tool and the registered record name. Accept both from the user's request if already clear. If the host was installed with `--skills-only`, explain that automatic tracking needs the startup hook and get permission before changing the installation. If the user agrees and writes are allowed, run `tracking --enable --name RECORD --cwd "ABSOLUTE_PROJECT_PATH"`. After enabling, tell the user to complete any pending hook trust steps and open a new chat in the project. If the command fails, report the error and keep manual tracking available.
 
 Ask later, when relevant, about other AI tools, company expectations, promotion interest, manager feedback, and supporting links. Keep employer records separate.
 

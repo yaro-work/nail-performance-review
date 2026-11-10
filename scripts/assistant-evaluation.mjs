@@ -5,7 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { initRecord, updateDocument, saveEvidence, listEvidence, readPriorityDecisions, readDocument } from '../src/records.mjs';
-import { setTracking } from '../src/config.mjs';
+import { setTracking, trackingRoot } from '../src/config.mjs';
 import { install } from '../src/install.mjs';
 import { reviewPacket } from '../src/reviews.mjs';
 import { scenarios } from './assistant-scenarios.mjs';
@@ -47,6 +47,12 @@ export function grade(expected, observed) {
     check('alignment asked only once', observed.reminders?.receipts.filter(r => r.key.includes(':alignment:')).length === 1);
   }
   if (expected.quietLast) check('routine follow-up stays quiet', !/\b(achievement|performance|priorit|promotion)\b/i.test(observed.lastMessage));
+  if (expected.setupTracking) {
+    const turns = observed.setupTurns || [];
+    check('setup visibly offers automatic tracking', /automatic tracking[^?\n]*\?/i.test(turns[1]?.assistant || ''));
+    check('workspace opt-in requires consent', turns.length === 3 && turns.slice(0, 2).every(turn => !turn.trackingEnabled) && turns[2].trackingEnabled);
+    check('setup says to start a new chat', /(?:new|fresh) (?:chat|session|conversation)/i.test(turns[2]?.assistant || ''));
+  }
   if (expected.outcomes) check('eligible outcomes reminder used', observed.commandResults.some(c => c.exitCode === 0 && /\bnudge\b/.test(c.command) && /outcomes/.test(c.command) && /"shown":\s*true/.test(c.output)));
   if (expected.noOutcomes) check('unfinished project has no outcomes prompt', !observed.reminders.receipts.some(r => r.key.includes(':outcomes:')) && observed.active.every(r => r.state === 'in-progress'));
   if (expected.file) check('requested edit completed', observed.file.includes(expected.fileIncludes));
@@ -128,7 +134,8 @@ async function runCase(base, scenario, model, executable) {
     const calls = events.filter(e => e.type === 'item.completed' && e.item?.type === 'command_execution').map(e => ({ command: e.item.command, exitCode: e.item.exit_code, output: e.item.aggregated_output }));
     commandResults.push(...calls);
     const records = await listEvidence(root, { includeSuperseded: true }).catch(() => []);
-    turns.push({ user: prompt, assistant, code, records, commands: calls, completed: code === 0 && events.some(e => e.type === 'turn.completed') });
+    const trackingEnabled = scenario.expected.setupTracking && await trackingRoot(project, { home }) === root;
+    turns.push({ user: prompt, assistant, code, records, commands: calls, trackingEnabled, completed: code === 0 && events.some(e => e.type === 'turn.completed') });
     if (!turns.at(-1).completed || !session) break;
   }
   let active = [], history = [], packet = '', recordError;
@@ -141,6 +148,7 @@ async function runCase(base, scenario, model, executable) {
   observed.goals = await readDocument(root, 'goals').then(doc => doc.items, () => []);
   observed.reminders = JSON.parse(await read(path.join(root, '.nail-reminders.json')) || '{"receipts":[]}');
   observed.lastMessage = messages.at(-1) || '';
+  if (scenario.expected.setupTracking) observed.setupTurns = turns.map(({ assistant, trackingEnabled }) => ({ assistant, trackingEnabled }));
   const result = { id: scenario.id, turns, ...grade({ ...scenario.expected, readOnly: Boolean(scenario.readOnly) }, observed), observed };
   await json(path.join(directory, 'result.json'), result);
   console.log(`${scenario.id}: ${result.status}; ${result.checks.filter(c => !c.pass).map(c => c.name).join(', ')}`);
