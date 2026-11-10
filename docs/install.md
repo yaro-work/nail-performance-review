@@ -116,9 +116,16 @@ codex plugin add nail-performance-review@yaro-work-nail
 gemini extensions install https://github.com/yaro-work/nail-performance-review
 ```
 
-**Cursor.** Open **Customize → Plugins**. Choose **From GitHub Repository**, paste the repo URL, and install the plugin. If your organization blocks GitHub imports, use the terminal adapter where permitted. [Cursor repository imports](https://cursor.com/docs/skills#installing-skills-from-a-repository)
+**Cursor.** Open **Customize → Plugins**. Choose **From GitHub Repository**, paste the repo URL, and install the plugin. If Cursor says your organization blocks third-party imports, ask which installation methods your administrator permits. [Cursor repository imports](https://cursor.com/docs/skills#installing-skills-from-a-repository)
 
 Start a new chat and say **“Help me set up my performance record.”**
+
+### Cursor and Claude Code on the same machine
+
+If Cursor imports Claude Code hooks, check **Customize → Hooks** and **Skills** before adding another copy of Nail. [Cursor hook compatibility](https://cursor.com/docs/hooks)
+
+- If Cursor imports both, remove the extra installation. For a native install, use **Customize → Plugins**. For a terminal adapter, use the [uninstall steps](#upgrade-or-uninstall).
+- If Cursor imports only hooks, keep the skills it uses. If your existing terminal adapter added the duplicate, run `node bin/nail.mjs install --target cursor --skills-only` from the clone to remove those hooks and retain the skills.
 
 ## Enable automatic tracking for a workspace
 

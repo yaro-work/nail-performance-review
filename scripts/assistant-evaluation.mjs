@@ -65,9 +65,12 @@ export function grade(expected, observed) {
       /\b1\s*[:\-–]\s*1s?\b|one-on-one/i.test(opening) && /self[- ]review/i.test(opening) &&
       /manager.{0,50}(review|guidance|feedback)|(review|guidance|feedback).{0,50}manager/i.test(opening));
     check('setup suggests accessible document links', /Google Doc/i.test(opening) && /links?/i.test(opening));
+    check('setup invites a career ladder without requiring it', /optional.{0,100}career ladder|career ladder.{0,100}optional/i.test(opening));
     check('setup avoids absolute privacy promises', !/completely private|100% private|fully private/i.test(opening));
     check('user goal saved during setup', observed.goals?.some(goal => /safer releases/i.test(goal.title)));
     check('setup explains the all-folder default', /all folders/i.test(turns[1]?.assistant || ''));
+    check('development target does not opt into promotion', /staff/i.test(observed.setupProfile?.targetLevel || '') && observed.setupProfile?.promotion === false);
+    check('setup receipt is brief', (turns[1]?.assistant || '').trim().split(/\s+/).length <= 100);
     check('setup uses the default and honors the switch to one folder', turns.length === 3 &&
       !turns[0].trackingEnabled && turns[1].allTracking && !turns[2].allTracking && turns[2].trackingEnabled);
   }
@@ -199,7 +202,11 @@ async function runCase(base, scenario, model, executable) {
   observed.sources = await readManagerSources(root).then(sources => sources.map(source => managerSourceStatus(source)), () => []);
   observed.reminders = JSON.parse(await read(path.join(root, '.nail-reminders.json')) || '{"receipts":[]}');
   observed.lastMessage = messages.at(-1) || '';
-  if (scenario.expected.setupTracking) observed.setupTurns = turns.map(({ assistant, trackingEnabled, allTracking }) => ({ assistant, trackingEnabled, allTracking }));
+  if (scenario.expected.setupTracking) {
+    observed.setupTurns = turns.map(({ assistant, trackingEnabled, allTracking }) => ({ assistant, trackingEnabled, allTracking }));
+    const { targetLevel, promotion } = await readDocument(root, 'profile').catch(() => ({}));
+    observed.setupProfile = { targetLevel, promotion };
+  }
   if (scenario.expected.sourceIntervals) observed.sourceTurns = turns.map(({ assistant, sourceIntervals }) => ({ assistant, sourceIntervals }));
   const result = { id: scenario.id, turns, ...grade({ ...scenario.expected, readOnly: Boolean(scenario.readOnly) }, observed), observed };
   await json(path.join(directory, 'result.json'), result);

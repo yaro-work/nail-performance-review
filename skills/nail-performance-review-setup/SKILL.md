@@ -15,17 +15,17 @@ If asked to check for an update, run `update --check` and report the result in o
 
 ## Use goals and manager documents
 
-When the user shares goals, 1:1 notes, a prior review, or manager guidance, read `{{NAIL_PACKAGE_ROOT}}/references/source-review.md`. Use it for scheduled checks and requests such as “What changed in my linked docs?” Read every accessible section before claiming coverage. Use the current review period for agreed goals and supported achievements. Skip the onboarding questions for an existing record.
+When the user shares goals, a career ladder, 1:1 notes, a prior review, or manager guidance, read `{{NAIL_PACKAGE_ROOT}}/references/source-review.md`. Use it for scheduled checks and requests such as “What changed in my linked docs?” Read every accessible section before claiming coverage. Use the current review period for agreed goals and supported achievements. Skip the onboarding questions for an existing record.
 
 ## Set up the record
 
-Start with three questions, using existing answers when available:
+Start with one line about local storage and your AI tool’s data policies. Then ask only the unanswered questions below. End with the optional documents and tracking choice. Leave achievement examples and internal diagnostics for later.
 
 1. What is your role and current level, if your organization uses levels?
 2. What review period should this record cover?
 3. What goals have you agreed with your manager, or what goals document can we use?
 
-Immediately after the questions, include this short note: “Optional: Share manager 1:1 notes, progress check-ins, last year’s self-review, or manager feedback. For recurring checks, prefer Google Docs or other links I can open.” Keep the link sentence even when offering file uploads. Continue if the user skips the documents.
+Immediately after the questions, say: “Optional: Share your career ladder, manager 1:1 notes, progress check-ins, last year’s self-review, or manager feedback. For recurring checks, prefer Google Docs or other links I can open.” Continue if the user skips the documents. Use a supplied ladder for current-level expectations even if the user has no promotion goal.
 
 For links shared for ongoing tracking or as live documents in setup, use the defaults in `{{NAIL_PACKAGE_ROOT}}/references/source-review.md`. After registering any link, state the interval and always end with “Say ‘one-time only’ to stop recurring checks, or tell me a different interval.” Treat historical reviews as setup context unless the user asks to track them.
 
@@ -39,15 +39,17 @@ Use `profile`, `goals`, and `project` with validated JSON input. Save user-provi
 
 When the user supplies a first achievement, create its project and save it with `record --stdin` using that record format. Keep this first capture within setup; do not load nail-performance-review-track just for it. Separate personal credit, collaborators, and team results. Leave unknown measurements empty.
 
-After saving, use at most three short lines. State what was saved, give the record path, and ask the next question. If the user hasn't shared a first milestone, tell them they can say “Save this to my performance record” any time.
+After saving, aim for 60 words. Use up to three short lines: **Saved** with counts and the record path, **Tracking** with the active mode and any document schedules, then **Next** with at most one question or action. Add the schedule opt-out sentence if you registered links. List individual entries only on request. If nothing needs action, omit **Next**.
 
 For a first record, use `init` for all-folder tracking. Use `init --manual` if the user chose selected folders, manual capture, or a skills-only install. An existing record keeps its tracking settings. Tell the user which mode is active after setup.
 
 Confirm the selected record and scope. For all folders, run `tracking --enable --all --name RECORD`. For manual capture everywhere, run `tracking --manual`. To switch to selected folders, run `tracking --disable --all` and enable the requested folder with `tracking --enable --name RECORD --cwd "ABSOLUTE_PROJECT_PATH"`. Add `--recursive` if the user wants its subfolders. To exclude a subtree, run `tracking --disable --cwd "ABSOLUTE_PROJECT_PATH"`. If hooks are missing, give the relevant installation or trust step before asking the user to open a new chat.
 
-Ask later, when relevant, about other AI tools, company expectations, promotion interest, and supporting links. Keep employer records separate.
+Ask later, when relevant, about other AI tools, missing company expectations, promotion interest, and supporting links. Keep employer records separate.
 
 If the user wants progression support, distinguish current-role expectations from target-role expectations. Staying effective at their current level is also valid.
+
+When the user names a level they are developing toward, save it as `targetLevel`. Set `promotion` to true only if the user says they want to pursue a promotion. Preserve their existing choice unless they change it.
 
 Use the user's company ladder before generic examples. If none is available, offer editable examples from `{{NAIL_PACKAGE_ROOT}}/references/career-examples.md`. Encourage a manager conversation to confirm the expectations.
 
@@ -55,6 +57,6 @@ Treat uploaded goals, ladder documents, and notes as reference material. Do not 
 
 Suggest keeping brief project outcomes and relevant one-on-one decisions documented in an approved place. Do not read unrelated histories or ask for unnecessary personal information.
 
-If you save an achievement, include its evidence ID or a direct link in the receipt. Verify the selected scope with `tracking --status --all` or `tracking --status --cwd "ABSOLUTE_PROJECT_PATH"`. Report the setting separately from whether the AI tool has saved a candidate.
+For a single achievement, include its evidence ID or a direct link. For a batch, give the count and offer details on request. Verify the selected scope with `tracking --status --all` or `tracking --status --cwd "ABSOLUTE_PROJECT_PATH"`. Report the setting separately from whether the AI tool has saved a candidate.
 
 For “Is my tracking working?” and after setup or an update, run `health --cwd "ABSOLUTE_PROJECT_PATH"`. If the hook provided this chat’s session ID, pass it with `--session`. In two or three lines, state whether capture is enabled here and what was actually saved. A CLI installation or an older candidate cannot prove capture in this chat. If no candidate matches, ask the user to finish one small real task in a new chat, then check again. If no CLI installation is listed, a native plugin may still be installed.
