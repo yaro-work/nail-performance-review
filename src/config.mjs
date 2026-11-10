@@ -41,12 +41,18 @@ export async function setTracking(options) {
   });
 }
 
-export async function trackingRoot(cwd, options = {}) {
-  const workspace = await workspacePath(cwd);
+export async function trackingStatus(options = {}) {
+  const workspace = await workspacePath(options.cwd || process.cwd());
   const config = await readConfig(options);
   const record = config.tracking?.find(item => item.workspace === workspace)?.record;
   const root = record && Object.hasOwn(config.records, record) && config.records[record];
-  return typeof root === 'string' && path.isAbsolute(root) ? root : undefined;
+  return typeof root === 'string' && path.isAbsolute(root)
+    ? { workspace, enabled: true, record, root }
+    : { workspace, enabled: false };
+}
+
+export async function trackingRoot(cwd, options = {}) {
+  return (await trackingStatus({ ...options, cwd })).root;
 }
 export async function registerRoot(root, options = {}) {
   const name = slug(options.name || 'work', 'record name');

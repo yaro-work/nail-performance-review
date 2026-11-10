@@ -7,7 +7,7 @@ description: Record meaningful achievements and check goal alignment while helpi
 
 Use the installed nail-performance-review CLI at `{{NAIL_PACKAGE_ROOT}}/bin/nail.mjs`. If unresolved, find the package root two directories above this skill file. Quote paths and run the CLI with Node.
 
-For automatic capture, start only when the startup hook says tracking is active for this workspace. At a meaningful milestone run `context --tracking` from the workspace root. If it fails, skip capture quietly. Do not fall back to ordinary context, guess the record, or read private files directly. Add `--project ID` when you know the matching project.
+For automatic capture, start only when a hook says tracking is active for this workspace. At a meaningful milestone run `context --tracking` from the workspace root. If it fails, skip capture quietly. Do not fall back to ordinary context, guess the record, or read private files directly. Add `--project ID` when you know the matching project.
 
 Use the exact record directory returned by tracking context as `--root` for subsequent commands in that capture. This keeps repository bindings from selecting a different record. Keep private record content out of work artifacts and normal task responses.
 
@@ -15,7 +15,7 @@ If the user explicitly asks to track work in this chat, confirm which record to 
 
 Respect host plan or read-only mode. Do not write performance notes while writes are prohibited. If no record exists, route to nail-performance-review-setup rather than creating a hidden record.
 
-During authorized work, capture a meaningful milestone before the final response when the current context supports one. Useful milestones include a delivered change, documented decision, completed analysis, resolved incident, or contribution that enabled colleagues.
+During authorized work, capture a meaningful milestone before the final response. A user's factual report can establish a milestone even if the turn only asks you to update a note. For example, capture “the readiness review is done” if the user's contribution is clear. Capture “I found the root cause and the other team fixed it” with credit for each party. Use `basis: reported` for facts the user reports. If the work is explicitly fictional, only save it on request in a separate test record.
 
 Skip routine edits, speculative plans, irrelevant personal activity, and the act of maintaining the performance record itself. Do not copy raw transcripts.
 
@@ -23,7 +23,7 @@ For routine edits, give the normal task response without announcing the tracking
 
 Keep tracking updates focused on the user's result. Avoid internal skill names, command names, and repeated plan announcements. If the host requires a skill disclosure, make it brief and describe the user outcome in plain language.
 
-Use `record --stdin` with the shape in `{{NAIL_PACKAGE_ROOT}}/references/record-format.md`. Create the relevant project and goals first if needed. Reuse the event ID when retrying the same capture.
+Use `record --stdin` with the shape in `{{NAIL_PACKAGE_ROOT}}/references/record-format.md`. Create the relevant project first if needed. Reuse the event ID when retrying the same capture.
 
 Separate the person's contribution, collaborators, and team outcome. Distinguish in-progress work, delivery, and measured impact. Label observations, user reports, and inferences honestly.
 
@@ -31,9 +31,9 @@ Ask for a missing link or metric only when it materially strengthens the record.
 
 Use `amend --stdin` for corrections, referring to the original evidence ID. Never silently rewrite someone else's credit or remove the original record.
 
-Match a project to saved goals using the current work and goal descriptions; do not invent a match or a new goal. Capture real progress even when no goal matches, using an empty goals list.
+Match a project to saved goals using the current work and goal descriptions. When the closest match is weak, leave the project and evidence goal lists empty. Capture the milestone even when no goal fits. Add a goal only after the user confirms its wording.
 
-For unclear alignment, use the eligible alignment reminder: offer to connect the work to a goal, add an agreed goal, or continue anyway. Ask whether it benefits their priorities without telling them to stop from missing context alone.
+For new work with no clear match, check the alignment reminder before replying. If eligible, ask “Would you like to link this work to an existing goal, add a new goal, or keep working on it without a goal?” If the user says it is a new initiative, offer to draft a goal for their review. Avoid guessing that a manager approved it.
 
 When the person says they want to continue anyway, save their response once with `nudge --project ID --session SESSION --reason alignment --action continue --note "their response"`. The returned Markdown file documents their choice across tools. Do not call it manager approval. Do not repeat the alignment question for that project and goal set. If they want a new goal, confirm its wording and preserve existing goals when updating the goal list.
 

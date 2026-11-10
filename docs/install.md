@@ -8,7 +8,7 @@ For the shortest setup, follow the [README installation steps](../README.md#inst
 
 Each AI tool connects to the same selected performance directory. Install an adapter in every tool you use, then start a new conversation.
 
-Only Codex has completed a native capture-and-review test so far. Other adapters have automated checks, and unattended capture remains unverified. Check the [current evidence](verification.md) before relying on it.
+See the [verification results](verification.md) for which workflows we ran in real AI sessions. Check your own setup before relying on automatic tracking.
 
 ## Create your record
 
@@ -73,6 +73,10 @@ Installation does not automatically trust hooks or change host approval settings
 
 Nail uses a startup hook. Node.js 22 or newer must be on the host’s PATH. In Codex, open `/hooks` to review and trust nail-performance-review's definitions. Other hosts apply their own trust and workspace policies.
 
+If Claude Code blocks an installation command, run that same command in your terminal from the plugin folder. Leave Claude's permission settings as they are. [Claude Code settings](https://code.claude.com/docs/en/settings)
+
+Claude Code also checks prompts for milestone cues in enabled workspaces. The CLI installer stores complete commands in user settings. The separate Claude plugin manifest uses Claude's documented argument-list format in its bundled hook file. [Claude Code hook formats](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form)
+
 Native plugin manifests are also included for manual host plugin loading. Installing files does not prove the host has activated them.
 
 Keep the cloned repository at its installed location. The adapter uses its local CLI and reference files. Reinstall after moving the repository.
@@ -90,6 +94,20 @@ node bin/nail.mjs tracking --enable --name work --cwd "/absolute/path/to/project
 Open a new session in that workspace. Each adapter uses the same opt-in. Subdirectories, unrelated workspaces, and Cursor multi-root workspaces do not activate tracking. Use `tracking --disable --cwd "/absolute/path/to/project"` to revoke the opt-in. A repository’s `.nail.json` can select a record for manual CLI use, but cannot authorize automatic tracking.
 
 To keep only manual skills, install with `--skills-only`. If Cursor already imports your Nail skills from Claude Code, run `install --target cursor --reuse-claude-skills` after installing the Claude adapter from the same checkout. Keep Third-Party Imports enabled in Cursor. If you turn it off or uninstall Claude skills, reinstall Cursor without the reuse flag. The Cursor adapter also installs a local rule that respects startup opt-in and explicit requests.
+
+## Check automatic tracking
+
+1. In the plugin folder, run `node bin/nail.mjs doctor`. Fix any missing or outdated hooks it reports.
+2. Check the exact folder shown in your AI tool. Use the command below and look for `"enabled": true`.
+3. Open a new chat in that folder. Describe a real milestone and what you contributed, then look for the saved achievement.
+
+```sh
+node bin/nail.mjs tracking --status --cwd "/absolute/path/to/project"
+```
+
+The folder check confirms your choice. The real milestone checks whether your AI can follow the instruction and save the achievement. Fictional tasks, planning, and routine edits can leave the record empty. Use a separate record if you want to save fictional test data.
+
+If your AI misses a milestone, say **“Save this to my performance record.”** If it asks for permission to write, review the destination before approving.
 
 ## Use several tools or records
 
@@ -135,9 +153,18 @@ The import command accepts nail-performance-review's structured export format. A
 
 ## Upgrade or uninstall
 
-Before upgrading, close the AI tools and back up your performance directory. Update the clone to a reviewed commit or release, then rerun adapter installation.
+1. Close your AI tools.
+2. From the plugin folder, update the clone and refresh the installed adapters. Run each command separately.
+3. Reopen your AI tools and start a new chat.
 
-Rerunning `install --target YOUR_TOOL` replaces unchanged older short-name skill files with the full-name versions. If you edited an installed skill, the installer stops and preserves it so you can back up and resolve your changes. Your performance records and unrelated settings stay in place. Restart the AI tool after upgrading. Reinstall every active adapter to remove old turn-end hooks and runtime paths. Start a new chat to apply the updated privacy behavior. Archived test conversations retain the skill names used when they ran.
+```sh
+git pull --ff-only
+node bin/nail.mjs update
+```
+
+The updater uses your existing installation choices, including manual skills and Cursor's shared Claude skills. It reports a backup path when it changes an existing settings file. If you edited an installed skill, resolve the reported conflict before retrying.
+
+The updater replaces old Nail hooks it can identify. If `doctor` still reports a bare Node hook, check that hook's origin in Claude Code before removing it.
 
 The initial preview wrote its registry under the home folder instead of the documented configuration directory. If it stops finding your record after upgrading, rerun `init` with the existing root and name. This restores registration without replacing existing notes.
 

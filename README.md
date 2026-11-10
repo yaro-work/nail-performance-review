@@ -49,7 +49,7 @@ The plugin doesn’t require an extra AI subscription. Use it with your current 
 
 **Prefer help from your AI?** Give this README or repository link to your local AI coding tool and paste:
 
-> Install nail-performance-review from https://github.com/yaro-work/nail-performance-review for the AI tools I use. Check whether Git and Node.js 22 or later are installed, and help me install missing prerequisites from their official sites. Keep my performance notes outside this repository, preserve my existing settings, and explain any trust steps I need to complete. Help me set up my first goal and achievement. Then ask if I want automatic tracking. If I say yes, confirm the project folder and record before enabling it.
+> Help me install nail-performance-review. Follow the [AI setup guide](https://github.com/yaro-work/nail-performance-review/blob/main/docs/ai-setup.md). Give me one next step at a time.
 
 **Prefer a few commands?** Install [Git](https://git-scm.com/downloads/) and [Node.js LTS, version 22 or later](https://nodejs.org/en/download) if you don’t have them. Node.js is the program that runs this plugin. Reopen your terminal after installation.
 
@@ -84,6 +84,19 @@ The plugin doesn’t require an extra AI subscription. Use it with your current 
   ```
 
 Open a new chat in that project after completing any [hook trust steps](docs/install.md#connect-an-ai-tool). For more details or to turn tracking off, see the [installation guide](docs/install.md#enable-automatic-tracking-for-a-workspace).
+
+Try it with a real milestone. For example, tell your AI that you finished a readiness review and describe what you contributed. Look for a saved achievement. If it misses one, say **“Save this to my performance record.”** Use the [tracking checks](docs/install.md#check-automatic-tracking) if it keeps missing milestones.
+
+### Update it
+
+Close your AI tools. In the plugin folder, run these commands one at a time.
+
+```sh
+git pull --ff-only
+node bin/nail.mjs update
+```
+
+Reopen your AI tools and start a new chat. The update keeps your saved records, workspace choices, and installation modes.
 
 ## Prepare a review
 

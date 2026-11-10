@@ -4,17 +4,17 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, createHash } from 'node:crypto';
-import { resolveRoot, readConfig, setTracking, trackingRoot } from '../src/config.mjs';
+import { resolveRoot, readConfig, setTracking, trackingRoot, trackingStatus } from '../src/config.mjs';
 import { initRecord, saveEvidence, updateDocument, doctor, exportBundle, importBundle } from '../src/records.mjs';
 import { getContext } from '../src/context.mjs';
 import { nudge } from '../src/nudges.mjs';
 import { reviewPacket, period } from '../src/reviews.mjs';
 import { htmlReport } from '../src/report.mjs';
 import { atomicWrite, assertInside, readOptional } from '../src/storage.mjs';
-import { install, uninstall, inspectInstallations } from '../src/install.mjs';
+import { install, uninstall, inspectInstallations, updateInstallations } from '../src/install.mjs';
 import { runHook } from '../src/hooks.mjs';
 
-const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable [--name RECORD] or --disable  Control automatic workspace tracking\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
+const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable [--name RECORD] | --disable | --status  Control automatic workspace tracking\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--dry-run]             Refresh all managed adapters from this checkout\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
 
 async function inputJSON() {
   let text = '';
@@ -37,7 +37,7 @@ async function main() {
     allowPositionals: true,
     options: Object.fromEntries([
       ...['root', 'name', 'cwd', 'role', 'timezone', 'level', 'start', 'end', 'period', 'project', 'session', 'reason', 'action', 'note', 'days', 'target', 'event', 'output', 'input'].map(key => [key, { type: 'string' }]),
-      ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
+      ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'status', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
     ]),
   });
   const [command, ...extra] = positionals;
@@ -64,8 +64,12 @@ async function main() {
       result.binding = binding;
     }
   } else if (command === 'tracking') {
-    if (Boolean(options.enable) === Boolean(options.disable) || options.root) throw new Error('Use tracking --enable [--name RECORD] or tracking --disable.');
-    result = await setTracking(options);
+    if ([options.enable, options.disable, options.status].filter(Boolean).length !== 1 || options.root ||
+        (!options.enable && options.name)) throw new Error('Use tracking --enable [--name RECORD], tracking --disable, or tracking --status.');
+    if (options.status) {
+      const { root, ...status } = await trackingStatus(options);
+      result = status;
+    } else result = await setTracking(options);
   } else if (command === 'context' && options.tracking) {
     if (options.root || options.name) throw new Error('Tracking context uses the workspace’s authorized record.');
     const root = await trackingRoot(options.cwd || process.cwd(), options);
@@ -76,6 +80,10 @@ async function main() {
     result = await (command === 'install' ? install : uninstall)(options.target, {
       ...options, skillsOnly: values['skills-only'], reuseClaudeSkills: values['reuse-claude-skills'],
     });
+  } else if (command === 'update') {
+    if (options.target || values['skills-only'] || values['reuse-claude-skills']) throw new Error('update refreshes all managed adapters in their existing modes. Use install --target to change a mode.');
+    result = await updateInstallations(options);
+    if (result.errors.length) process.exitCode = 1;
   } else if (command === 'hook') {
     let payload, hookError;
     try { payload = await inputJSON(); result = await runHook(options.target, options.event, payload, options); }

@@ -6,7 +6,7 @@ nail-performance-review stores notes on your computer. Its CLI does not call AI 
 
 Your active AI tool can read the notes you authorize it to use. That tool's data policies still apply. Local storage does not make an AI conversation private by itself.
 
-Automatic tracking is off until you enable it for an exact workspace. Its startup hook sends a short instruction and does not read your performance record. At a milestone, your AI tool can request tracking context for that workspace. That context includes goals and expectations, plus evidence and priority decisions for a named project. Manager notes stay out of tracking context. Manual review and context commands can include more information.
+Automatic tracking is off until you enable it for an exact workspace. Hooks send a short instruction and leave record reading to the AI tool. Claude Code also checks the current prompt locally for signs of a milestone. The hook discards the prompt after the check and sends only the same fixed instruction when tracking is enabled. At a milestone, your AI tool can request tracking context for that workspace. That context includes goals and expectations, plus evidence and priority decisions for a named project. Manager notes stay out of tracking context. Manual review and context commands can include more information.
 
 Choose a folder outside source repositories. Keep separate records for employers or contexts that must not share information.
 

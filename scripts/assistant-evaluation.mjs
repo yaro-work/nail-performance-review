@@ -32,6 +32,8 @@ export function grade(expected, observed) {
     check('personal contribution', observed.active.every(r => r.contribution.toLowerCase().includes(expected.contribution)));
     check('collaborator retained', observed.active.every(r => r.collaborators.some(c => c.includes(expected.collaborator))));
     check('no invented measurements', observed.active.every(r => r.metrics.length === expected.metrics));
+    if (expected.goalIds) check('goal links match the reported work', observed.active.every(r =>
+      r.goals.length === expected.goalIds.length && expected.goalIds.every(id => r.goals.includes(id))));
     check('supporting PR retained', observed.active.every(r => r.links.includes('https://example.com/pr/123')));
     if (expected.context === false || expected.packet) check('saved evidence cited', observed.active.every(r => observed.messages.includes(r.id) || observed.messages.includes('https://example.com/pr/123')));
   }
@@ -49,11 +51,13 @@ export function grade(expected, observed) {
   if (expected.quietLast) check('routine follow-up stays quiet', !/\b(achievement|performance|priorit|promotion)\b/i.test(observed.lastMessage));
   if (expected.setupTracking) {
     const turns = observed.setupTurns || [];
+    check('user goal saved during setup', observed.goals?.some(goal => /safer releases/i.test(goal.title)));
     check('setup visibly offers automatic tracking', /automatic tracking[^?\n]*\?/i.test(turns[1]?.assistant || ''));
     check('workspace opt-in requires consent', turns.length === 3 && turns.slice(0, 2).every(turn => !turn.trackingEnabled) && turns[2].trackingEnabled);
     check('setup says to start a new chat', /(?:new|fresh) (?:chat|session|conversation)/i.test(turns[2]?.assistant || ''));
   }
   if (expected.outcomes) check('eligible outcomes reminder used', observed.commandResults.some(c => c.exitCode === 0 && /\bnudge\b/.test(c.command) && /outcomes/.test(c.command) && /"shown":\s*true/.test(c.output)));
+  if (expected.alignment) check('eligible alignment reminder used', observed.reminders.receipts.some(r => r.key.includes(':alignment:')));
   if (expected.noOutcomes) check('unfinished project has no outcomes prompt', !observed.reminders.receipts.some(r => r.key.includes(':outcomes:')) && observed.active.every(r => r.state === 'in-progress'));
   if (expected.file) check('requested edit completed', observed.file.includes(expected.fileIncludes));
   return { status: !checks[0].pass ? 'inconclusive' : checks.every(c => c.pass) ? 'pass' : 'fail', checks };
@@ -112,7 +116,7 @@ async function runCase(base, scenario, model, executable) {
   await install('codex', { home, root, packageRoot });
   await fs.cp(path.join(home, '.agents'), path.join(project, '.agents'), { recursive: true });
   await write(path.join(project, '.nail.json'), JSON.stringify({ schema: 1, record: 'work' }));
-  await write(path.join(project, 'AGENTS.md'), `# Workspace\nWork only in this workspace and the private notes at ${root}. Do not change plugin source, use other agents, access unrelated notes, or contact external services. Use Node for local commands.\n`);
+  await write(path.join(project, 'AGENTS.md'), `# Workspace\nWork only in this workspace and the private notes at ${root}. Nail setup may write the isolated Nail registry at ${path.join(home, 'nail/config.json')}. Do not change plugin source, use other agents, access unrelated notes, or contact external services. Use Node for local commands.\n`);
   for (const [name, content] of Object.entries(scenario.files || {})) await write(path.join(project, name), content);
   const journal = path.join(directory, 'hooks.jsonl');
   const config = JSON.parse(await read(path.join(home, '.codex/hooks.json')));
