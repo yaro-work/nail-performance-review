@@ -1,5 +1,5 @@
 import { trackingStatus } from './config.mjs';
-import { managerRefreshDue, readManagerSource } from './manager-source.mjs';
+import { managerRefreshDue, readManagerSources } from './manager-source.mjs';
 import { validSessionId } from './records.mjs';
 
 export const hookEvents = {
@@ -33,8 +33,8 @@ export async function runHook(target, event, payload = {}, options = {}) {
   const sessionId = payload?.session_id ?? payload?.conversation_id;
   if (validSessionId(sessionId)) text += ` For the candidate's sessionId, use ${sessionId} (source: ${cursor ? 'cursor' : target}).`;
   if (!promptCheck && !multiple &&
-      managerRefreshDue(await readManagerSource(root).catch(() => null), workspace)) {
-    text += ' An opted-in manager document check is due. When appropriate and writes are allowed, follow the scheduled manager document steps in the nail-performance-review-setup skill.';
+      (await readManagerSources(root).catch(() => [])).some(source => managerRefreshDue(source, workspace))) {
+    text += ' A scheduled document check is due. When appropriate and writes are allowed, follow the document refresh steps in the nail-performance-review-setup skill.';
   }
   if (target === 'cursor') return { additional_context: text };
   return { hookSpecificOutput: { hookEventName: event, additionalContext: text } };

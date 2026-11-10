@@ -1,5 +1,20 @@
 export const scenarios = [
   {
+    id: 'linked-document-defaults',
+    turns: [
+      'Save and start tracking these two linked documents in this workspace: my recurring manager 1:1 at https://example.com/one-on-one and my current goals tracker at https://example.com/goal-tracker. These are fictional test links. Assume the test connector has access, but just register both links for future checks in this turn. Use the default schedules.',
+      'Stop recurring checks for the goals tracker. Check my manager 1:1 every 14 days instead.',
+    ],
+    expected: { active: 0, history: 0, sourceIntervals: [7, 30], changedSourceIntervals: [0, 14] },
+  },
+  {
+    id: 'scheduled-document-refresh',
+    documentSource: { url: 'https://example.com/one-on-one', kind: 'one-on-one' },
+    files: { 'manager-check.md': '# Manager 1:1, June 15, 2026\n\nWe agreed to update the “Make releases safer” goal. Its new target is to document rollback steps within 48 hours of each release. This is an agreed change to the existing goal, not a proposed one.\n' },
+    turns: ['Process the due 1:1 refresh in this workspace. The authorized test connector snapshot for the saved link is manager-check.md. Read that file in place of fetching the fictional URL. Apply clearly agreed changes and finish the document check.'],
+    expected: { active: 0, history: 0, documentRefresh: true },
+  },
+  {
     id: 'all-folders', allFolders: true,
     files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false},"production":{"cache":"normal","refreshOnSave":true}}' },
     turns: ['Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.'],

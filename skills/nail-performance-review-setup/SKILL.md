@@ -23,7 +23,9 @@ Start with three questions, using existing answers when available:
 2. What review period should this record cover?
 3. What goals have you agreed with your manager, or what goals document can we use?
 
-After the questions, add one optional note: “If you have them, share notes from manager 1:1s or other progress check-ins, last year's self-review, and any review or guidance from your manager. These can help identify what to focus on and develop.” Invite only material the user is allowed to share. Continue setup if they skip the documents.
+Immediately after the questions, include this short note: “Optional: Share manager 1:1 notes, progress check-ins, last year’s self-review, or manager feedback. For recurring checks, prefer Google Docs or other links I can open.” Keep the link sentence even when offering file uploads. Continue if the user skips the documents.
+
+For links shared for ongoing tracking or as live documents in setup, use the defaults in `{{NAIL_PACKAGE_ROOT}}/references/source-review.md`. After registering any link, state the interval and always end with “Say ‘one-time only’ to stop recurring checks, or tell me a different interval.” Treat historical reviews as setup context unless the user asks to track them.
 
 Ask missing questions once, in one short numbered list. For a first record, say “Automatic tracking is on for all folders by default. Say ‘Switch to manual tracking’ if you prefer to save only when asked.” If the role or review period is unknown, wait for answers before creating the record. Keep commands and raw output out of replies unless needed.
 
