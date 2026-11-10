@@ -17,6 +17,31 @@ export async function atomicWrite(file, text) {
   } finally { await fs.rm(temporary, { force: true }); }
 }
 
+async function ownerIsDead(lock) {
+  const text = await readOptional(lock);
+  let owner;
+  try { owner = JSON.parse(text); } catch { return false; }
+  if (!Number.isInteger(owner?.pid) || owner.pid < 1 || owner.pid > 0x7fffffff || !Number.isFinite(Date.parse(owner.started))) return false;
+  try { process.kill(owner.pid, 0); return false; }
+  catch (error) { return error.code === 'ESRCH'; }
+}
+
+async function recoverDeadLock(root, lock) {
+  if (!await ownerIsDead(lock)) return;
+  const recovery = await assertInside(root, path.join(root, '.nail.lock.recovery'));
+  const handle = await fs.open(recovery, 'wx', 0o600).catch(error => {
+    if (error.code !== 'EEXIST') throw error;
+  });
+  if (!handle) return;
+  try {
+    // Recheck under the recovery guard so two contenders cannot unlink a successor's lock.
+    if (await ownerIsDead(lock)) await fs.unlink(lock);
+  } finally {
+    await handle.close();
+    await fs.unlink(recovery);
+  }
+}
+
 export async function withLock(root, action) {
   await assertInside(root, root);
   await fs.mkdir(root, { recursive: true, mode: 0o700 });
@@ -27,6 +52,7 @@ export async function withLock(root, action) {
     try { handle = await fs.open(lock, 'wx', 0o600); }
     catch (error) {
       if (error.code !== 'EEXIST') throw error;
+      await recoverDeadLock(root, lock);
       if (Date.now() >= deadline) throw new Error(`Record is busy. Check the owner of ${lock} before removing a stale lock.`);
       await delay(25);
     }

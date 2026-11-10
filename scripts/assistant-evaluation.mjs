@@ -5,6 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { initRecord, updateDocument, saveEvidence, listEvidence, readPriorityDecisions, readDocument } from '../src/records.mjs';
+import { setTracking, trackingRoot } from '../src/config.mjs';
 import { install } from '../src/install.mjs';
 import { reviewPacket } from '../src/reviews.mjs';
 import { scenarios } from './assistant-scenarios.mjs';
@@ -22,8 +23,9 @@ export function grade(expected, observed) {
   check('assistant completed every turn', observed.completed);
   check('assistant responded', observed.messages.trim().length > 0);
   check('Nail SessionStart executed', observed.hooks.some(h => h.event === 'SessionStart' && h.ok));
-  check('Nail Stop completed without extra context', observed.hooks.some(h => h.event === 'Stop' && h.ok && h.empty));
-  if (expected.context !== false) check('native SessionStart delivered Nail context', observed.hooks.some(h => h.event === 'SessionStart' && h.context) && observed.injectedContext);
+  check('No Nail Stop hook ran', !observed.hooks.some(h => h.event === 'Stop'));
+  if (expected.context === false) check('no Nail context in an unapproved workspace', observed.hooks.some(h => h.event === 'SessionStart' && h.empty) && !observed.injectedContext);
+  else check('native SessionStart delivered Nail context', observed.hooks.some(h => h.event === 'SessionStart' && h.context) && observed.injectedContext);
   check('active record count', observed.active.length === expected.active);
   check('history record count', observed.history.length === expected.history);
   if (expected.active) {
@@ -31,17 +33,26 @@ export function grade(expected, observed) {
     check('collaborator retained', observed.active.every(r => r.collaborators.some(c => c.includes(expected.collaborator))));
     check('no invented measurements', observed.active.every(r => r.metrics.length === expected.metrics));
     check('supporting PR retained', observed.active.every(r => r.links.includes('https://example.com/pr/123')));
-    check('saved evidence cited', observed.active.every(r => observed.messages.includes(r.id) || observed.messages.includes('https://example.com/pr/123')));
+    if (expected.context === false || expected.packet) check('saved evidence cited', observed.active.every(r => observed.messages.includes(r.id) || observed.messages.includes('https://example.com/pr/123')));
   }
   if (expected.correction) check('correction preserves original', observed.active[0]?.supersedes === observed.history.find(r => !r.supersedes)?.id);
   if (expected.packet) check('review packet read through CLI', observed.commandResults.some(c => c.exitCode === 0 && /nail\.mjs/.test(c.command) && /\breview\b/.test(c.command) && c.output.includes('# Self-review evidence packet') && observed.active.every(r => c.output.includes(r.id))));
-  if (expected.quiet) check('no performance interruption', !/\b(nail|achievement|performance record|career|promotion)\b/i.test(observed.messages));
+  if (expected.quiet) {
+    const visibleText = observed.messages.replace(/\]\(<[^>\r\n]*>\)|\]\([^\)\r\n]*\)/g, ']');
+    check('no performance interruption', !/\b(nail|achievement|performance record|career|promotion)\b/i.test(visibleText));
+  }
   if (expected.unchanged) check('read-only record unchanged', observed.before === observed.after);
   if (expected.priorityDecision) {
     check('user choice saved without inventing a goal', observed.priorityDecisions?.length === 1 && /value the community/i.test(observed.priorityDecisions[0].body) && observed.goals?.length === 1);
     check('alignment asked only once', observed.reminders?.receipts.filter(r => r.key.includes(':alignment:')).length === 1);
   }
   if (expected.quietLast) check('routine follow-up stays quiet', !/\b(achievement|performance|priorit|promotion)\b/i.test(observed.lastMessage));
+  if (expected.setupTracking) {
+    const turns = observed.setupTurns || [];
+    check('setup visibly offers automatic tracking', /automatic tracking[^?\n]*\?/i.test(turns[1]?.assistant || ''));
+    check('workspace opt-in requires consent', turns.length === 3 && turns.slice(0, 2).every(turn => !turn.trackingEnabled) && turns[2].trackingEnabled);
+    check('setup says to start a new chat', /(?:new|fresh) (?:chat|session|conversation)/i.test(turns[2]?.assistant || ''));
+  }
   if (expected.outcomes) check('eligible outcomes reminder used', observed.commandResults.some(c => c.exitCode === 0 && /\bnudge\b/.test(c.command) && /outcomes/.test(c.command) && /"shown":\s*true/.test(c.output)));
   if (expected.noOutcomes) check('unfinished project has no outcomes prompt', !observed.reminders.receipts.some(r => r.key.includes(':outcomes:')) && observed.active.every(r => r.state === 'in-progress'));
   if (expected.file) check('requested edit completed', observed.file.includes(expected.fileIncludes));
@@ -93,6 +104,7 @@ async function runCase(base, scenario, model, executable) {
   await fs.mkdir(project, { recursive: true });
   if (scenario.initialized !== false) {
     await initRecord({ root, home, name: 'work', role: 'Senior engineer', timezone: 'UTC', start: '2026-01-01', end: '2026-12-31' });
+    if (scenario.expected.context !== false) await setTracking({ home, cwd: project, name: 'work', enable: true });
     await updateDocument(root, 'goals', { items: [{ id: 'reliability', title: 'Make releases safer' }] });
     await updateDocument(root, 'project', { id: 'migration', title: 'Service migration', goals: ['reliability'] });
   }
@@ -122,7 +134,8 @@ async function runCase(base, scenario, model, executable) {
     const calls = events.filter(e => e.type === 'item.completed' && e.item?.type === 'command_execution').map(e => ({ command: e.item.command, exitCode: e.item.exit_code, output: e.item.aggregated_output }));
     commandResults.push(...calls);
     const records = await listEvidence(root, { includeSuperseded: true }).catch(() => []);
-    turns.push({ user: prompt, assistant, code, records, commands: calls, completed: code === 0 && events.some(e => e.type === 'turn.completed') });
+    const trackingEnabled = scenario.expected.setupTracking && await trackingRoot(project, { home }) === root;
+    turns.push({ user: prompt, assistant, code, records, commands: calls, trackingEnabled, completed: code === 0 && events.some(e => e.type === 'turn.completed') });
     if (!turns.at(-1).completed || !session) break;
   }
   let active = [], history = [], packet = '', recordError;
@@ -135,6 +148,7 @@ async function runCase(base, scenario, model, executable) {
   observed.goals = await readDocument(root, 'goals').then(doc => doc.items, () => []);
   observed.reminders = JSON.parse(await read(path.join(root, '.nail-reminders.json')) || '{"receipts":[]}');
   observed.lastMessage = messages.at(-1) || '';
+  if (scenario.expected.setupTracking) observed.setupTurns = turns.map(({ assistant, trackingEnabled }) => ({ assistant, trackingEnabled }));
   const result = { id: scenario.id, turns, ...grade({ ...scenario.expected, readOnly: Boolean(scenario.readOnly) }, observed), observed };
   await json(path.join(directory, 'result.json'), result);
   console.log(`${scenario.id}: ${result.status}; ${result.checks.filter(c => !c.pass).map(c => c.name).join(', ')}`);

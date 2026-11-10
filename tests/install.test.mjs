@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, writeFile, access, rm, rename } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, access, rm, rename, lstat, symlink } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -17,6 +17,8 @@ async function setup(t) {
     await mkdir(folder, { recursive: true });
     await writeFile(path.join(folder, 'SKILL.md'), `# ${name}\nUse {{NAIL_PACKAGE_ROOT}} and {{NAIL_CLI}}.\n`);
   }
+  await mkdir(path.join(packageRoot, 'adapters/cursor'), { recursive: true });
+  await writeFile(path.join(packageRoot, 'adapters/cursor/nail.mdc'), 'Test Cursor rule.');
   await mkdir(path.join(packageRoot, 'bin'), { recursive: true });
   await writeFile(path.join(packageRoot, 'bin', 'nail.mjs'), 'console.log(JSON.stringify(process.argv.slice(2)));\n');
   return { home: path.join(dir, 'home with spaces'), root: path.join(dir, 'performance'), packageRoot };
@@ -34,6 +36,7 @@ async function legacyInstallation(target, options) {
   const manifestFile = path.join(options.home, '.nail', 'installations', `${target}.json`);
   const manifest = await json(manifestFile);
   for (const file of manifest.files) {
+    if (path.extname(file.path) === '.mdc') continue;
     const name = path.basename(path.dirname(file.path));
     const legacyName = name.replace('nail-performance-review-', 'nail-');
     const legacyPath = path.join(path.dirname(path.dirname(file.path)), legacyName, 'SKILL.md');
@@ -59,9 +62,10 @@ for (const target of ['codex', 'claude', 'cursor', 'gemini', 'generic']) {
     await install(target, options);
     await install(target, options);
     const current = await json(manifestFile);
-    assert.equal(current.files.length, 4);
-    assert.ok(current.files.every(file => path.basename(path.dirname(file.path)).startsWith('nail-performance-review-')));
-    for (const file of manifest.files) await assert.rejects(access(file.path), { code: 'ENOENT' });
+    const skills = current.files.filter(file => file.path.endsWith('SKILL.md'));
+    assert.equal(skills.length, 4);
+    assert.ok(skills.every(file => path.basename(path.dirname(file.path)).startsWith('nail-performance-review-')));
+    for (const file of manifest.files.filter(item => item.path.endsWith('SKILL.md'))) await assert.rejects(access(file.path), { code: 'ENOENT' });
     assert.deepEqual((await inspectInstallations(options)).find(x => x.target === target).issues, []);
     await uninstall(target, options);
     for (const file of current.files) await assert.rejects(access(file.path), { code: 'ENOENT' });
@@ -204,8 +208,62 @@ test('installation inspection reports removed hooks and edited skills', async (t
   await writeFile(path.join(options.home, '.agents/skills/nail-performance-review-track/SKILL.md'), 'Changed by user.');
   await put(path.join(options.home, '.codex/hooks.json'), { hooks: {} });
   const status = (await inspectInstallations(options)).find((item) => item.target === 'codex');
-  assert.equal(status.issues.length, 3);
+  assert.equal(status.issues.length, 2);
   assert.match(status.issues.join('\n'), /Edited installed skill/);
   assert.match(status.issues.join('\n'), /Missing SessionStart hook/);
   assert.equal(status.verifiedAutomaticCapture, false);
+});
+
+test('upgrade removes only Nail’s legacy Stop entry; skills-only mode removes Nail startup too', async t => {
+  const options = await setup(t);
+  await install('claude', options);
+  const file = path.join(options.home, '.claude/settings.json');
+  const manifestFile = path.join(options.home, '.nail/installations/claude.json');
+  const config = await json(file), manifest = await json(manifestFile);
+  const owned = { hooks: [{ type: 'command', command: process.execPath, args: ['old Nail', 'Stop'] }] };
+  const unrelated = { hooks: [{ type: 'command', command: 'unrelated' }] };
+  config.hooks.Stop = [owned, unrelated];
+  manifest.entries.push({ event: 'Stop', entry: owned });
+  await put(file, config); await put(manifestFile, manifest);
+  await install('claude', options);
+  assert.deepEqual((await json(file)).hooks.Stop, [unrelated]);
+  assert.equal((await json(file)).hooks.SessionStart[0].hooks[0].command, 'node');
+  await install('claude', { ...options, skillsOnly: true });
+  assert.deepEqual((await json(file)).hooks, { Stop: [unrelated] });
+});
+
+test('Cursor can reuse installed Claude skills, owns its rule, and detects a missing dependency', async t => {
+  const options = await setup(t);
+  const reused = { ...options, reuseClaudeSkills: true };
+  await assert.rejects(install('cursor', reused), /Install current Nail skills for Claude first/);
+  await Promise.all([install('claude', options), install('cursor', options)]);
+  const claudeManifest = path.join(options.home, '.nail/installations/claude.json');
+  const legacy = await json(claudeManifest);
+  const oldSkill = 'Load ordinary context from the current project.';
+  await writeFile(legacy.files[1].path, oldSkill);
+  legacy.files[1].sha256 = createHash('sha256').update(oldSkill).digest('hex');
+  await put(claudeManifest, legacy);
+  await assert.rejects(install('cursor', reused), /Install current Nail skills for Claude first/);
+  await install('claude', options);
+  await install('cursor', reused);
+  const cursor = await json(path.join(options.home, '.nail/installations/cursor.json'));
+  assert.equal(cursor.files.length, 1);
+  assert.match(cursor.files[0].path, /nail-performance-review\.mdc$/);
+  await access(cursor.files[0].path);
+  await assert.rejects(access(path.join(options.home, '.cursor/skills/nail-performance-review-track/SKILL.md')), { code: 'ENOENT' });
+  await uninstall('claude', options);
+  assert.match((await inspectInstallations(options)).find(item => item.target === 'cursor').issues.join('\n'), /missing, old, or edited Claude skills/);
+  await uninstall('cursor', options);
+  await assert.rejects(access(cursor.files[0].path), { code: 'ENOENT' });
+});
+
+test('installer preserves a linked host settings directory', async t => {
+  const options = await setup(t);
+  const linked = path.join(options.home, '.claude');
+  const actual = path.join(options.home, 'managed-settings');
+  await put(path.join(actual, 'settings.json'), { ownedByUser: true });
+  await symlink(actual, linked, process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(install('claude', options), /Symbolic link/);
+  assert.equal((await lstat(linked)).isSymbolicLink(), true);
+  assert.deepEqual(await json(path.join(actual, 'settings.json')), { ownedByUser: true });
 });

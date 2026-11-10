@@ -72,6 +72,6 @@ Runs are independent samples. Repeat before a release when model consistency mat
 
 Automatic capture remains an assistant decision. A startup-hook receipt alone cannot prove that the assistant saved a milestone.
 
-These scenarios do not yet establish persistent trust onboarding, native Claude/Cursor/Gemini support, crash recovery, or long-term usability.
+These scenarios do not yet establish persistent trust onboarding, native Claude/Cursor/Gemini support, or long-term usability.
 
 </details>

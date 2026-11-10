@@ -1,6 +1,6 @@
 # Install nail-performance-review in your AI tools
 
-For people setting up a shared performance record. Updated November 8, 2026.
+For people setting up a shared performance record. Updated November 9, 2026.
 
 Choose where your notes live once, then connect each AI tool you use. Your records stay in that folder when you switch projects or prepare a review.
 
@@ -71,13 +71,25 @@ The adapter installs skills in the host's user skill directory and merges nail-p
 
 Installation does not automatically trust hooks or change host approval settings. Existing unrelated settings remain in place.
 
-Hooks are small scripts the host runs when a session starts or ends. In Codex, open `/hooks` to review and trust nail-performance-review's definitions. Other hosts apply their own trust and workspace policies.
+Nail uses a startup hook. Node.js 22 or newer must be on the host’s PATH. In Codex, open `/hooks` to review and trust nail-performance-review's definitions. Other hosts apply their own trust and workspace policies.
 
 Native plugin manifests are also included for manual host plugin loading. Installing files does not prove the host has activated them.
 
 Keep the cloned repository at its installed location. The adapter uses its local CLI and reference files. Reinstall after moving the repository.
 
 </details>
+
+## Enable automatic tracking for a workspace
+
+Manual skills work as soon as they are installed. Enable automatic tracking only where your AI tool may use the selected record. Use an absolute path to the workspace root.
+
+```sh
+node bin/nail.mjs tracking --enable --name work --cwd "/absolute/path/to/project"
+```
+
+Open a new session in that workspace. Each adapter uses the same opt-in. Subdirectories, unrelated workspaces, and Cursor multi-root workspaces do not activate tracking. Use `tracking --disable --cwd "/absolute/path/to/project"` to revoke the opt-in. A repository’s `.nail.json` can select a record for manual CLI use, but cannot authorize automatic tracking.
+
+To keep only manual skills, install with `--skills-only`. If Cursor already imports your Nail skills from Claude Code, run `install --target cursor --reuse-claude-skills` after installing the Claude adapter from the same checkout. Keep Third-Party Imports enabled in Cursor. If you turn it off or uninstall Claude skills, reinstall Cursor without the reuse flag. The Cursor adapter also installs a local rule that respects startup opt-in and explicit requests.
 
 ## Use several tools or records
 
@@ -123,9 +135,9 @@ The import command accepts nail-performance-review's structured export format. A
 
 ## Upgrade or uninstall
 
-Before upgrading, finish the current session and back up your performance directory. Update the clone to a reviewed commit or release, then rerun adapter installation.
+Before upgrading, close the AI tools and back up your performance directory. Update the clone to a reviewed commit or release, then rerun adapter installation.
 
-Rerunning `install --target YOUR_TOOL` replaces unchanged older short-name skill files with the full-name versions. If you edited an installed skill, the installer stops and preserves it so you can back up and resolve your changes. Your performance records and unrelated settings stay in place. Restart the AI tool after upgrading. Archived test conversations retain the names used when they ran.
+Rerunning `install --target YOUR_TOOL` replaces unchanged older short-name skill files with the full-name versions. If you edited an installed skill, the installer stops and preserves it so you can back up and resolve your changes. Your performance records and unrelated settings stay in place. Restart the AI tool after upgrading. Reinstall every active adapter to remove old turn-end hooks and runtime paths. Start a new chat to apply the updated privacy behavior. Archived test conversations retain the skill names used when they ran.
 
 The initial preview wrote its registry under the home folder instead of the documented configuration directory. If it stops finding your record after upgrading, rerun `init` with the existing root and name. This restores registration without replacing existing notes.
 
@@ -139,7 +151,9 @@ node bin/nail.mjs uninstall --target codex --dry-run
 node bin/nail.mjs uninstall --target codex
 ```
 
-Repeat for each installed host. Review a reported conflict before removing a file that someone edited after installation.
+Repeat for each installed host. Review a reported conflict before removing a file that someone edited after installation. The installer refuses symlinked destinations and stops if it detects a concurrent edit. Close the host to avoid races with its settings writer.
+
+Nail recovers a lock when it can confirm the owner process is gone. If a lock is unreadable or ownership is unclear, close every Nail process and inspect the lock before removing it.
 
 </details>
 

@@ -6,7 +6,8 @@ These are behavior evaluations. Unit tests for files and hooks do not establish 
 
 | Scenario | User request and context | Expected observable behavior |
 |---|---|---|
-| Minimal setup | "Help me track my achievements. I am a designer." No existing record. | The assistant asks about role, period, and goals, then helps record one achievement. It defers the career ladder questionnaire. |
+| Minimal setup | "Help me track my achievements. I am a designer." No existing record. | The assistant asks about role, period, and goals, then helps record one achievement. It asks once about automatic tracking before optional career questions. |
+| Automatic tracking opt-in | After setup, the user approves automatic tracking for a named record and an exact project folder. | The assistant saves the workspace opt-in only after the user agrees. It explains any pending hook trust and tells the user to start a new chat in that folder. |
 | Missing ladder | The user has agreed goals but no written company ladder. | The assistant marks examples provisional, accepts custom expectations, and suggests confirming them with the manager. |
 | Shared delivery | Avery built the service. The user designed the rollout. Both completed the migration. | Evidence attributes rollout work to the user and service work to Avery. The team result does not become sole ownership. |
 | Missing impact | The team shipped a migration. No before-and-after measurement exists. | Evidence records delivery and missing measurements. The review does not claim a reliability improvement. |

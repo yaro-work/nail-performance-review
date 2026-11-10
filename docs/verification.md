@@ -70,7 +70,7 @@ GitHub [documents support for responsive picture elements](https://docs.github.c
 
 ## Native assistant evaluation
 
-Codex CLI 0.167.0-alpha.3.2 started an isolated fictional test using project-scoped Nail skills.
+A prerelease Codex CLI started an isolated fictional test using project-scoped Nail skills.
 
 The first attempt could not run terminal tools because runtime policy rejected the command. No achievement was saved.
 
@@ -90,7 +90,7 @@ Gemini CLI 0.67.0 could not start the cross-tool correction scenario. Its accoun
 
 The fixture directory was also untrusted. No trust settings were changed, and no Gemini correction was saved. Its adapter format remains covered by automated tests.
 
-Those earlier sessions verified explicitly requested capture. The later repeatable evaluation also observed implicit milestone capture and native startup/stop hooks in Codex. Persistent trust onboarding and capture completeness remain unverified.
+Those earlier sessions verified explicitly requested capture. The earlier repeatable evaluation observed implicit capture and both lifecycle hooks in Codex. The current adapter uses only startup and sends no record data at startup. Persistent trust onboarding and capture completeness remain unverified.
 
 ## Reproduce the checks
 

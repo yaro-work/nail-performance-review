@@ -1,14 +1,14 @@
 import path from 'node:path';
-import { readOptional } from './storage.mjs';
+import { assertInside, readOptional } from './storage.mjs';
 import { readDocument, listEvidence, readPriorityDecisions, fingerprint } from './records.mjs';
 
-export async function getContext(root, { project, limit = 8000 } = {}) {
+export async function getContext(root, { project, limit = 8000, tracking = false } = {}) {
   const profile = await readDocument(root, 'profile');
   const goals = await readDocument(root, 'goals');
-  const expectations = (await readOptional(path.join(root, 'expectations.md'))) || '';
-  const notes = (await readOptional(path.join(root, 'manager-notes.md'))) || '';
-  const evidence = (await listEvidence(root)).filter(record => !project || record.project === project).slice(-10);
-  const decisions = (await readPriorityDecisions(root)).filter(item => (!project || item.project === project) && item.goalsFingerprint === fingerprint(goals.items));
+  const expectations = (await readOptional(await assertInside(root, path.join(root, 'expectations.md')))) || '';
+  const notes = tracking ? '' : (await readOptional(await assertInside(root, path.join(root, 'manager-notes.md')))) || '';
+  const evidence = tracking && !project ? [] : (await listEvidence(root)).filter(record => !project || record.project === project).slice(-10);
+  const decisions = tracking && !project ? [] : (await readPriorityDecisions(root)).filter(item => (!project || item.project === project) && item.goalsFingerprint === fingerprint(goals.items));
   const context = [
     '# nail-performance-review context',
     `Private record directory: ${root}`,

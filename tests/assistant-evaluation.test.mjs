@@ -4,7 +4,7 @@ import { grade } from '../scripts/assistant-evaluation.mjs';
 
 const record = { id: 'entry-1', contribution: 'Reviewed the plan.', collaborators: ['Avery'], metrics: [], links: ['https://example.com/pr/123'] };
 const expected = { active: 1, history: 1, contribution: 'review', collaborator: 'Avery', metrics: 0 };
-const observation = () => ({ sandbox: 'workspace-write', completed: true, injectedContext: true, hooks: [{ event: 'SessionStart', ok: true, context: true }, { event: 'Stop', ok: true, empty: true }], active: [record], history: [record], messages: 'Saved entry-1.', commandResults: [], packet: '', before: 'same', after: 'same', file: '' });
+const observation = () => ({ sandbox: 'workspace-write', completed: true, injectedContext: true, hooks: [{ event: 'SessionStart', ok: true, context: true }], active: [record], history: [record], messages: 'Saved entry-1.', commandResults: [], packet: '', before: 'same', after: 'same', file: '' });
 
 test('a polished capture claim cannot pass without a saved record', () => {
   const observed = observation(); observed.active = []; observed.history = [];
@@ -27,6 +27,12 @@ test('read-only writes and noisy routine edits fail', () => {
   assert.equal(grade({ active: 0, history: 0, unchanged: true }, observed).status, 'fail');
   assert.equal(grade({ active: 0, history: 0, quiet: true }, observed).status, 'fail');
 });
+test('a local file link does not count as a performance interruption', () => {
+  const observed = { ...observation(), active: [], history: [], messages: 'Updated [release-notes.md](<F:/AI Lab/nail-session-safety/workspace/release-notes.md>).'};
+  const criteria = { active: 0, history: 0, quiet: true };
+  assert.equal(grade(criteria, observed).status, 'pass');
+  assert.equal(grade(criteria, { ...observed, messages: observed.messages + ' Saved a Nail achievement.' }).status, 'fail');
+});
 test('correct evidence and native delivery pass while incomplete turns fail', () => {
   assert.equal(grade(expected, observation()).status, 'pass');
   assert.equal(grade(expected, { ...observation(), completed: false }).status, 'fail');
@@ -42,7 +48,7 @@ test('an unrelated successful command cannot stand in for reading a review packe
   observed.commandResults[0].exitCode = 1;
   assert.equal(grade({ ...expected, packet: true }, observed).status, 'fail');
 });
-test('a sibling lifecycle observer cannot stand in for the Nail Stop hook', () => {
-  const observed = observation(); observed.hooks[1] = { event: 'Stop', code: 0 };
+test('an obsolete Nail Stop hook fails the evaluation', () => {
+  const observed = observation(); observed.hooks.push({ event: 'Stop', ok: true, empty: true });
   assert.equal(grade(expected, observed).status, 'fail');
 });

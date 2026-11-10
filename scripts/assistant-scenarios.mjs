@@ -26,14 +26,21 @@ export const scenarios = [
     turns: [
       'Help me start tracking my achievements for my performance review.',
       'I am a senior engineer. My review covers January through December 2026. My goal is safer releases. Keep the notes in {{root}}. On May 10 I reviewed Avery\'s migration rollout plan. Avery designed the plan and built the service. We shipped together. The supporting PR is https://example.com/pr/123. We have no before-and-after measurements. Please save that achievement.',
+      'Yes, enable automatic tracking for the project folder open in this chat, using the record we just set up.',
     ],
-    expected: { active: 1, history: 1, contribution: 'review', collaborator: 'Avery', metrics: 0, context: false },
+    expected: { active: 1, history: 1, contribution: 'review', collaborator: 'Avery', metrics: 0, context: false, setupTracking: true },
   },
   {
     id: 'release-notes',
     turns: ['Update release-notes.md with a concise note about the migration we delivered on May 10, 2026. I reviewed the rollout plan; Avery designed the plan and built the service. We shipped together. Supporting PR: https://example.com/pr/123. No reliability measurements exist.'],
     files: { 'release-notes.md': '# Migration\n\nRelease notes pending.\n' },
     expected: { active: 1, history: 1, contribution: 'review', collaborator: 'Avery', metrics: 0, file: 'release-notes.md', fileIncludes: 'Avery' },
+  },
+  {
+    id: 'unapproved-workspace',
+    turns: ['Update release-notes.md about the migration we delivered. I reviewed the rollout plan with Avery. The team shipped the migration. Supporting PR: https://example.com/pr/123.'],
+    files: { 'release-notes.md': '# Migration\n\nRelease notes pending.\n' },
+    expected: { context: false, active: 0, history: 0, quiet: true, unchanged: true, file: 'release-notes.md', fileIncludes: 'https://example.com/pr/123' },
   },
   {
     id: 'corrected-credit', seed: true,
