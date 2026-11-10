@@ -87,6 +87,12 @@ Open a new chat in that project after completing any [hook trust steps](docs/ins
 
 Try it with a real milestone. For example, tell your AI that you finished a readiness review and describe what you contributed. Look for a saved achievement. If it misses one, say **“Save this to my performance record.”** Use the [tracking checks](docs/install.md#check-automatic-tracking) if it keeps missing milestones.
 
+### Use your goals and one-on-one notes
+
+Share a goals document or manager notes with your AI and say **“Use this whole document to fill in my goals and achievements for this review period.”** Ask which sections it read if access was incomplete.
+
+For a saved manager document link, you can choose weekly or three-week checks. The check runs when you next open an eligible workspace after it is due. Your AI needs access to the document and asks before changing your record. [Set up document checks](docs/install.md#check-a-manager-document-for-updates)
+
 ### Update it
 
 Close your AI tools. In the plugin folder, run these commands one at a time.

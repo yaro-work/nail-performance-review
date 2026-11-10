@@ -1,4 +1,5 @@
-import { trackingRoot } from './config.mjs';
+import { trackingStatus } from './config.mjs';
+import { managerRefreshDue, readManagerSource } from './manager-source.mjs';
 
 const starts = { codex: 'SessionStart', claude: 'SessionStart', cursor: 'sessionStart', gemini: 'SessionStart' };
 const milestoneCue = /\b(?:done|finished|fixed|delivered|shipped|merged|resolved|completed|accepted|root cause)\b/i;
@@ -16,8 +17,13 @@ export async function runHook(target, event, payload = {}, options = {}) {
   const cwd = roots === undefined && !cursor ? payload?.cwd :
     Array.isArray(roots) && roots.length === 1 ? roots[0] : undefined;
   if (typeof cwd !== 'string' || !cwd) return {};
-  if (!await trackingRoot(cwd, options)) return {};
-  const text = `nail-performance-review is active for this workspace. ${capture}`;
+  const { root, workspace } = await trackingStatus({ ...options, cwd });
+  if (!root) return {};
+  let text = `nail-performance-review is active for this workspace. ${capture}`;
+  if (!promptCheck && payload?.permission_mode !== 'plan' &&
+      managerRefreshDue(await readManagerSource(root).catch(() => null), workspace)) {
+    text += ' An opted-in manager document check is due. When appropriate and writes are allowed, follow the scheduled manager document steps in the nail-performance-review-setup skill.';
+  }
   if (target === 'cursor') return { additional_context: text };
   return { hookSpecificOutput: { hookEventName: event, additionalContext: text } };
 }
