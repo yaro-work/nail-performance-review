@@ -24,6 +24,7 @@ test('one update pulls new code and refreshes all four terminal adapters in thei
   git(upstream, 'add', 'src', 'bin', 'skills', 'adapters');
   commit('Initial fixture');
   git(directory, 'clone', upstream, clone);
+  git(clone, 'config', 'core.hooksPath', hooks);
   const env = { ...process.env, NAIL_HOME: home, NAIL_CONFIG: path.join(home, 'nail/config.json') };
   const run = (...args) => spawnSync(process.execPath, ['bin/nail.mjs', ...args], { cwd: clone, env, encoding: 'utf8' });
   const cli = (...args) => {
@@ -38,6 +39,7 @@ test('one update pulls new code and refreshes all four terminal adapters in thei
   cli('install', '--target', 'cursor', '--reuse-claude-skills');
   cli('install', '--target', 'gemini');
   const configBefore = await readFile(env.NAIL_CONFIG, 'utf8');
+  const profileBefore = await readFile(path.join(record, 'profile.md'), 'utf8');
   const oldHead = git(clone, 'rev-parse', 'HEAD');
 
   const installer = path.join(upstream, 'src/install.mjs');
@@ -67,4 +69,5 @@ test('one update pulls new code and refreshes all four terminal adapters in thei
   const cursor = JSON.parse(await readFile(path.join(home, '.nail/installations/cursor.json'), 'utf8'));
   assert.equal(cursor.reuseClaudeSkills, true);
   assert.equal(await readFile(env.NAIL_CONFIG, 'utf8'), configBefore);
+  assert.equal(await readFile(path.join(record, 'profile.md'), 'utf8'), profileBefore);
 });
