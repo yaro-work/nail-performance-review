@@ -1,6 +1,6 @@
 ---
 name: nail-performance-review-setup
-description: Set up a private record, check tracking health, manage linked documents, or change tracking scope.
+description: Set up a private record, check tracking health or plugin updates, manage linked documents, or change tracking scope.
 ---
 
 # Set up a performance record
@@ -10,6 +10,8 @@ Use the installed nail-performance-review CLI at `{{NAIL_PACKAGE_ROOT}}/bin/nail
 Respect the host's plan or read-only mode. In those modes, propose the setup without writing files.
 
 If the user asks to change tracking for an existing record, go straight to the tracking instructions below.
+
+If asked to check for an update, run `update --check` and report the result in one line. If asked to turn update notices off or on, run `update --notifications off` or `update --notifications on`. Use the installed CLI. An update check never authorizes installation. Use the install guide’s updater for the user’s installation method when asked to update.
 
 ## Use goals and manager documents
 

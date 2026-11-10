@@ -55,6 +55,14 @@ The plugin doesn’t require an extra AI subscription. Use it with your current 
 
 Choose **User** scope, open a new chat, and say **“Help me set up my performance record.”** If you used the terminal installer before, follow the [switching steps](docs/install.md#install-through-claude-code).
 
+| Your AI tool | Install from GitHub |
+|---|---|
+| Gemini CLI | `gemini extensions install https://github.com/yaro-work/nail-performance-review` |
+| Codex CLI | `codex plugin marketplace add yaro-work/nail-performance-review`, then `codex plugin add nail-performance-review@yaro-work-nail` |
+| Cursor | In **Customize → Plugins**, import `https://github.com/yaro-work/nail-performance-review` from GitHub, then select **Install**. |
+
+Start a new chat after installing. See the [native install guide](docs/install.md#install-through-codex-gemini-or-cursor) for hook trust and switching from the terminal installer.
+
 **Prefer help from your AI?** Give this README or repository link to your local AI coding tool and paste:
 
 > Help me install nail-performance-review. Follow the [AI setup guide](https://github.com/yaro-work/nail-performance-review/blob/main/docs/ai-setup.md). Give me one next step at a time.
@@ -108,7 +116,11 @@ Prefer Google Docs or other links your AI can open. Manager 1:1s default to week
 
 ### Update it
 
+After two weeks, the startup hook checks the public version on GitHub and tells you when an update is available. It checks only in workspaces with tracking enabled. You choose when to install it. [Check now or turn off notices](docs/install.md#update-notices)
+
 If you installed through Claude Code's plugin browser, open `/plugin`, select **Installed**, then choose **Update now** for nail-performance-review.
+
+For other native installs, use your [AI tool’s updater](docs/install.md#update-a-native-install).
 
 If you installed from a clone, close your AI tools and run one command in the plugin folder. It updates every adapter you installed from the terminal, including Codex, Claude Code, Cursor, and Gemini CLI.
 

@@ -19,9 +19,10 @@ test('one update pulls new code and refreshes all four terminal adapters in thei
     encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
   const commit = message => git(upstream, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgSign=false', 'commit', '-m', message);
-  for (const name of ['src', 'bin', 'skills', 'adapters']) await cp(path.resolve(name), path.join(upstream, name), { recursive: true });
+  const packageFiles = ['src', 'bin', 'skills', 'adapters', 'package.json'];
+  for (const name of packageFiles) await cp(path.resolve(name), path.join(upstream, name), { recursive: true });
   git(upstream, 'init', '--initial-branch=main');
-  git(upstream, 'add', 'src', 'bin', 'skills', 'adapters');
+  git(upstream, 'add', ...packageFiles);
   commit('Initial fixture');
   git(directory, 'clone', upstream, clone);
   git(clone, 'config', 'core.hooksPath', hooks);

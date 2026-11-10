@@ -75,7 +75,7 @@ Nail uses a startup hook. Node.js 22 or newer must be on the host’s PATH. In C
 
 If Claude Code blocks an installation command, run that same command in your terminal from the plugin folder. Leave Claude's permission settings as they are. [Claude Code settings](https://code.claude.com/docs/en/settings)
 
-Claude Code, Codex, and Gemini CLI also remind the AI at the start of a turn in enabled workspaces. The Claude CLI installer stores complete commands in user settings. The separate Claude plugin manifest uses Claude's argument-list format in its bundled hook file. [Claude Code hook formats](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form)
+The terminal adapters for Claude Code, Codex, and Gemini CLI also remind the AI at the start of a turn in enabled workspaces. The native Claude plugin uses an argument list for its per-turn hook. [Claude Code hook formats](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form)
 
 Native plugin manifests are also included for manual host plugin loading. Installing files does not prove the host has activated them.
 
@@ -98,6 +98,27 @@ Use this option in a local Claude Code session. Install Git and Node.js 22 or la
 Use `/plugin` to confirm the plugin is installed and enabled. Nail's `doctor` reports terminal-managed adapters, so use the Claude panel for this installation. To update, choose **Update now** under **Installed**. To opt into Claude's automatic updates, enable them for the marketplace under **Marketplaces**. [Claude Code plugin management](https://code.claude.com/docs/en/discover-plugins)
 
 Claude may still ask before writing to your private record or opening an external document. If auto mode blocks an operation, review it in Claude's **Recently blocked** permission list. [Claude Code permission modes](https://code.claude.com/docs/en/permission-modes#review-denials)
+
+### Install through Codex, Gemini, or Cursor
+
+If you already use the terminal adapter, close the AI tool. In your clone, run `node bin/nail.mjs uninstall --target TOOL` with `codex`, `gemini`, or `cursor` to avoid duplicate hooks. Your notes stay in place.
+
+**Codex CLI.** Run these two commands in your terminal. If your version lacks `codex plugin add`, add the marketplace and install from **Plugins** in the desktop app. Review the hooks in `/hooks`. [Codex CLI reference](https://learn.chatgpt.com/docs/cli/reference#codex-plugin)
+
+```sh
+codex plugin marketplace add yaro-work/nail-performance-review
+codex plugin add nail-performance-review@yaro-work-nail
+```
+
+**Gemini CLI.** Run this command in your terminal. Review the extension and hook prompts, then restart Gemini. Add `--auto-update` if you want Gemini to apply extension updates automatically. [Gemini CLI extensions](https://geminicli.com/docs/extensions/reference/)
+
+```sh
+gemini extensions install https://github.com/yaro-work/nail-performance-review
+```
+
+**Cursor.** Open **Customize → Plugins**. Choose **From GitHub Repository**, paste the repo URL, and install the plugin. If your organization blocks GitHub imports, use the terminal adapter where permitted. [Cursor repository imports](https://cursor.com/docs/skills#installing-skills-from-a-repository)
+
+Start a new chat and say **“Help me set up my performance record.”**
 
 ## Enable automatic tracking for a workspace
 
@@ -186,7 +207,7 @@ The import command accepts nail-performance-review's structured export format. A
 
 The first review covers all accessible sections. Later checks use revision information or review the document again. Ask **“What changed in my linked docs?”** for the last attempt, saved changes, and next check.
 
-After a failed check, the next eligible chat can retry after 15 minutes, then an hour, then daily. A successful check clears the retries. If the laptop is off, the next eligible chat can pick up the overdue check. Cursor checks at chat start. Claude Code, Codex, and Gemini CLI can also check during a chat.
+After a failed check, the next eligible chat can retry after 15 minutes, then an hour, then daily. A successful check clears the retries. If the laptop is off, the next eligible chat can pick up the overdue check. Cursor and the native Gemini extension check at chat start. Claude Code, Codex, and the Gemini terminal adapter can also check during a chat.
 
 To configure checks from a terminal, pass JSON on stdin to `node bin/nail.mjs manager-source --stdin --name work --cwd "/absolute/path/to/project"`. Use `{"url":"https://example.com/notes","kind":"one-on-one"}` for weekly checks, or add `"intervalDays":0` for manual checks. A kind of `document` defaults to 30 days.
 
@@ -195,6 +216,25 @@ Run `node bin/nail.mjs manager-source --name work` to list source IDs. To change
 If two links are hard to tell apart, pass `{"url":"HTTPS_DOCUMENT_URL"}` on stdin to `node bin/nail.mjs manager-source --lookup --stdin --name work`. The lookup returns the matching ID without opening the document or changing its schedule.
 
 ## Upgrade or uninstall
+
+### Update a native install
+
+Use the same tool you installed with:
+
+| Install method | How to update |
+|---|---|
+| Claude Code | Open `/plugin`, select **Installed**, then choose **Update now**. |
+| Codex CLI | Run `codex plugin marketplace upgrade yaro-work-nail` and restart Codex. |
+| Gemini CLI | Run `gemini extensions update nail-performance-review` and restart Gemini. |
+| Cursor | Open **Customize → Plugins** and refresh your imported marketplace. |
+
+### Update notices
+
+The plugin starts its 14-day timer the first time you open a chat with tracking enabled. When a check is due, the next eligible startup fetches the public package version. Each AI tool gets one notice per new version. If GitHub is unreachable, the next eligible startup can retry after a day.
+
+Ask your AI **“Check for a plugin update”** or **“Turn off plugin update notices.”** From the plugin folder, use `node bin/nail.mjs update --check` or `node bin/nail.mjs update --notifications off`. Replace `off` with `on` to resume.
+
+### Update a terminal installation
 
 1. Close your AI tools.
 2. From the plugin folder, update the clone and refresh the installed adapters with one command.

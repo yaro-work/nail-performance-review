@@ -1,6 +1,7 @@
 import { trackingStatus } from './config.mjs';
 import { managerRefreshDue, readManagerSources } from './manager-source.mjs';
 import { validSessionId } from './records.mjs';
+import { updateNotice } from './update-notices.mjs';
 
 export const hookEvents = {
   codex: ['SessionStart', 'UserPromptSubmit'],
@@ -36,6 +37,14 @@ export async function runHook(target, event, payload = {}, options = {}) {
       (await readManagerSources(root).catch(() => [])).some(source => managerRefreshDue(source, workspace))) {
     text += ' A scheduled document check is due. When appropriate and writes are allowed, follow the document refresh steps in the nail-performance-review-setup skill.';
   }
-  if (target === 'cursor') return { additional_context: text };
-  return { hookSpecificOutput: { hookEventName: event, additionalContext: text } };
+  const notice = !promptCheck && !multiple
+    ? await updateNotice(cursor ? 'cursor' : target, options).catch(() => undefined)
+    : undefined;
+  if (target === 'cursor') return {
+    additional_context: notice ? `${text} After answering, share this update notice once: ${notice}` : text,
+  };
+  return {
+    hookSpecificOutput: { hookEventName: event, additionalContext: text },
+    ...(notice && { systemMessage: notice }),
+  };
 }
