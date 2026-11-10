@@ -91,7 +91,7 @@ Try it with a real milestone. For example, tell your AI that you finished a read
 
 Share a goals document or manager notes with your AI and say **“Use this whole document to fill in my goals and achievements for this review period.”** Ask which sections it read if access was incomplete.
 
-For a saved manager document link, you can choose weekly or three-week checks. The check runs when you next open an eligible workspace after it is due. Your AI needs access to the document and asks before changing your record. [Set up document checks](docs/install.md#check-a-manager-document-for-updates)
+For a saved manager document link, you can choose weekly or three-week checks. When you next open the selected workspace after a check is due, Nail asks your AI to check the document. Your AI needs access and asks before changing your record. [Set up document checks](docs/install.md#check-a-manager-document-for-updates)
 
 ### Update it
 

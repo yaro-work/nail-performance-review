@@ -156,9 +156,9 @@ The import command accepts nail-performance-review's structured export format. A
 1. Share the document with your AI. Ask it to review the whole document and fill in agreed goals and supported achievements.
 2. If you want to revisit a private link, ask your AI to save it in your performance record.
 3. Choose manual checks, weekly checks, or checks every three weeks. For recurring checks, confirm an enabled workspace.
-4. After a check is due, open a new chat in that workspace. Your AI uses its existing document access and asks before saving proposed changes.
+4. After a check is due, open a new chat in that workspace. Nail reminds your AI to check the link with its existing access. Your AI asks before saving proposed changes.
 
-The first review covers all accessible sections. If the AI cannot read the whole document, it tells you which parts it missed. Later checks use revision information when available or review the document again. Recurring checks need an active AI chat. They stop when you pause them or disable tracking for the chosen folder.
+The first review covers all accessible sections. If the AI cannot read the whole document, it tells you which parts it missed. Later checks use revision information when available or review the document again. Recurring checks need an active AI chat. To prevent new checks, pause them or disable tracking for the chosen folder.
 
 Say **“Check my manager document now”** or **“Pause manager document checks.”** To pause from a terminal in the plugin folder, run `node bin/nail.mjs manager-source --disable --name work`.
 
