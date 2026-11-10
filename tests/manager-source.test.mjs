@@ -99,6 +99,7 @@ test('multiple links keep separate cadences, pauses, and legacy checkpoints', as
   const weekly = cli([...command, '--cwd', workspace], { url: 'https://example.com/weekly', kind: 'one-on-one' });
   const monthly = cli([...command, '--cwd', workspace], { url: 'https://example.com/monthly', reviewed: true });
   assert.equal(weekly.intervalDays, 7);
+  assert.ok(weekly.next.includes(`--disable --id ${weekly.id}`));
   assert.equal(monthly.intervalDays, 30);
   const sources = cli(['manager-source', '--root', root]).sources;
   assert.equal(sources.length, 3);

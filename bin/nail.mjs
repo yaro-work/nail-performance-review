@@ -101,7 +101,7 @@ async function main() {
             return status.workspace;
           },
         });
-        if (result.intervalDays) result.next = 'Use manager-source --disable --id to pause this link. Pass its id and intervalDays on stdin to change the schedule.';
+        if (result.intervalDays) result.next = `Use manager-source --disable --id ${result.id} to pause. Pass id and intervalDays on stdin to change the schedule.`;
       } else {
         const sources = (await readManagerSources(root)).map(managerSourceStatus);
         result = { configured: Boolean(sources.length), ...(sources.length === 1 ? sources[0] : {}), sources };
