@@ -9,10 +9,30 @@ export const scenarios = [
   },
   {
     id: 'scheduled-document-refresh',
-    documentSource: { url: 'https://example.com/one-on-one', kind: 'one-on-one' },
+    documentSources: [
+      { url: 'https://example.com/unavailable', label: 'Blocked notes' },
+      { url: 'https://example.com/one-on-one', kind: 'one-on-one', label: 'Manager 1:1' },
+    ],
     files: { 'manager-check.md': '# Manager 1:1, June 15, 2026\n\nWe agreed to update the “Make releases safer” goal. Its new target is to document rollback steps within 48 hours of each release. This is an agreed change to the existing goal, not a proposed one.\n' },
-    turns: ['Process the due 1:1 refresh in this workspace. The authorized test connector snapshot for the saved link is manager-check.md. Read that file in place of fetching the fictional URL. Apply clearly agreed changes and finish the document check.'],
+    turns: [
+      'Process both due document checks in this workspace. The authorized test connector reports that Blocked notes is unavailable. For Manager 1:1, use the authorized snapshot manager-check.md in place of the fictional link. Apply clearly agreed changes.',
+      'What changed in my linked docs?',
+    ],
     expected: { active: 0, history: 0, documentRefresh: true },
+  },
+  {
+    id: 'tracking-health',
+    files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false}}' },
+    turns: [
+      'Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.',
+      'Is my tracking working? Did it save something in this chat?',
+    ],
+    expected: { active: 1, history: 1, contribution: 'staging', metrics: 0, link: false, candidate: 'delivered', health: true },
+  },
+  {
+    id: 'weekly-one-on-one', seed: true,
+    turns: ['Review my week and prep my 1:1 for May 10 to May 16, 2026.'],
+    expected: { active: 1, history: 1, contribution: 'design', collaborator: 'Avery', metrics: 0, week: true, unchanged: true },
   },
   {
     id: 'all-folders', allFolders: true,

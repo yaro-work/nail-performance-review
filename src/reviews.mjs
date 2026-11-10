@@ -1,4 +1,4 @@
-import { readDocument, listEvidence, date, fingerprint, isIncludedEvidence } from './records.mjs';
+import { readDocument, listEvidence, date, fingerprint, isIncludedEvidence, today } from './records.mjs';
 import path from 'node:path';
 import { markdown, readOptional } from './storage.mjs';
 
@@ -16,6 +16,23 @@ export async function period(root, options = {}) {
   date(start, 'start'); date(end, 'end');
   if (start > end) throw new Error('Review start must not follow its end.');
   return { start, end };
+}
+
+export async function weekPacket(root, options = {}) {
+  if (options.period) throw new Error('Use --start and --end for a custom weekly brief.');
+  const profile = await readDocument(root, 'profile');
+  const end = date(options.end ?? today(profile.timezone), 'end');
+  const start = options.start ?? new Date(Date.parse(end) - 6 * 86_400_000).toISOString().slice(0, 10);
+  const range = await period(root, { start, end });
+  const { items } = await readDocument(root, 'goals');
+  const records = await listEvidence(root, range);
+  return {
+    ...range,
+    goals: items.map(({ id, title }) => ({ id, title })),
+    records: records.filter(record => record.reviewStatus !== 'excluded').map(({
+      id, date, project, goals, contribution, collaborators, outcome, state, basis, metrics, links, reviewStatus,
+    }) => ({ id, date, project, goals, contribution, collaborators, outcome, state, basis, metrics, links, reviewStatus: reviewStatus ?? 'included' })),
+  };
 }
 export async function reviewPacket(root, options = {}) {
   const range = await period(root, options);

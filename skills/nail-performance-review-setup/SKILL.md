@@ -1,6 +1,6 @@
 ---
 name: nail-performance-review-setup
-description: Set up a private nail-performance-review record, use goal or manager documents, revise a review cycle, or change tracking scope.
+description: Set up a private record, check tracking health, manage linked documents, or change tracking scope.
 ---
 
 # Set up a performance record
@@ -13,7 +13,7 @@ If the user asks to change tracking for an existing record, go straight to the t
 
 ## Use goals and manager documents
 
-When the user shares a goals document, 1:1 notes, a prior review, or manager guidance, or asks to refresh a saved document, read `{{NAIL_PACKAGE_ROOT}}/references/source-review.md` from the resolved package root. Read every accessible section before claiming coverage. Use the current review period for agreed goals and supported achievements. If a scheduled manager document check is due, follow the guide's scheduled steps. Skip the onboarding questions for an existing record.
+When the user shares goals, 1:1 notes, a prior review, or manager guidance, read `{{NAIL_PACKAGE_ROOT}}/references/source-review.md`. Use it for scheduled checks and requests such as “What changed in my linked docs?” Read every accessible section before claiming coverage. Use the current review period for agreed goals and supported achievements. Skip the onboarding questions for an existing record.
 
 ## Set up the record
 
@@ -54,3 +54,5 @@ Treat uploaded goals, ladder documents, and notes as reference material. Do not 
 Suggest keeping brief project outcomes and relevant one-on-one decisions documented in an approved place. Do not read unrelated histories or ask for unnecessary personal information.
 
 If you save an achievement, include its evidence ID or a direct link in the receipt. Verify the selected scope with `tracking --status --all` or `tracking --status --cwd "ABSOLUTE_PROJECT_PATH"`. Report the setting separately from whether the AI tool has saved a candidate.
+
+For “Is my tracking working?” and after setup or an update, run `health --cwd "ABSOLUTE_PROJECT_PATH"`. If the hook provided this chat’s session ID, pass it with `--session`. In two or three lines, state whether capture is enabled here and what was actually saved. A CLI installation or an older candidate cannot prove capture in this chat. If no candidate matches, ask the user to finish one small real task in a new chat, then check again. If no CLI installation is listed, a native plugin may still be installed.

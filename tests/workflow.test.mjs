@@ -77,3 +77,52 @@ test('automatic context selects the opted-in record, ignoring repository binding
   assert.equal((await cli(['tracking', '--disable', '--cwd', workspace], env)).code, 0);
   assert.equal((await cli(args, env)).code, 1);
 });
+
+test('health distinguishes a saved candidate from installation and current folder settings', async t => {
+  const { base, env } = await fixture(t);
+  const health = async session => {
+    const result = await cli(['health', '--cwd', base, '--session', session], env);
+    assert.equal(result.code, 0, result.stderr);
+    return JSON.parse(result.stdout);
+  };
+  assert.equal((await cli(['install', '--target', 'codex'], env)).code, 0);
+  const before = await health('session-1');
+  const codex = summary => summary.hosts.find(host => host.target === 'codex');
+  assert.equal(before.enabled, true);
+  assert.equal(codex(before).installedByCli, true);
+  assert.equal(codex(before).lastCandidateAt, null);
+  const candidate = evidence({ source: 'codex', reviewStatus: 'candidate', sessionId: 'session-1' });
+  const saved = await cli(['record', '--stdin'], env, JSON.stringify(candidate));
+  assert.equal(saved.code, 0, saved.stderr);
+  const record = JSON.parse(saved.stdout);
+  assert.equal(codex(await health('session-1')).candidateInSession, true);
+  assert.equal(codex(await health('session-2')).candidateInSession, false);
+  assert.equal((await cli(['triage', '--id', record.id, '--action', 'include'], env)).code, 0);
+  assert.equal((await cli(['tracking', '--disable', '--cwd', base], env)).code, 0);
+  const after = await health('session-1');
+  assert.equal(after.enabled, false);
+  assert.equal(codex(after).lastCandidateAt, record.recordedAt);
+  assert.doesNotMatch(JSON.stringify(after), /Designed the retry strategy/);
+});
+
+test('the weekly packet contains only relevant evidence and keeps candidates separate', async t => {
+  const { env } = await fixture(t);
+  const run = async (args, input) => {
+    const result = await cli(args, env, input && JSON.stringify(input));
+    assert.equal(result.code, 0, result.stderr);
+    return JSON.parse(result.stdout);
+  };
+  const goal = { id: 'reliability', title: 'Safer releases' };
+  await run(['goals', '--stdin'], { items: [goal] });
+  const log = input => run(['record', '--stdin'], evidence({ goals: [goal.id], ...input }));
+  const included = await log({ date: '2026-06-10', contribution: 'Updated rollout with Avery.' });
+  const pending = await log({ date: '2026-06-16', contribution: 'Diagnosed flaky rollout.', reviewStatus: 'candidate' });
+  await log({ date: '2026-06-11', contribution: 'Excluded work.', reviewStatus: 'excluded' });
+  await log({ date: '2026-06-09', contribution: 'Previous week.' });
+  const packet = await run(['week', '--end', '2026-06-16']);
+  assert.equal(packet.start, '2026-06-10');
+  assert.equal(packet.end, '2026-06-16');
+  assert.deepEqual(packet.goals, [goal]);
+  assert.deepEqual(packet.records.map(record => [record.id, record.reviewStatus]), [[included.id, 'included'], [pending.id, 'candidate']]);
+  assert.ok(packet.records.every(record => !record.file && !record.sessionId));
+});
