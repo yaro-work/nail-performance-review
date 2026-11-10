@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, writeFile, access, rm, rename, lstat, symlink
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { install, uninstall, inspectInstallations } from '../src/install.mjs';
+import { install, uninstall, inspectInstallations, updateInstallations } from '../src/install.mjs';
 
 async function setup(t) {
   const base = path.resolve('.test-data');
@@ -184,7 +184,7 @@ test('generated host commands execute a script whose path contains spaces and ap
     let result;
     if (hook.args) result = spawnSync(hook.command, hook.args, { encoding: 'utf8', input: '{}' });
     else if (process.platform === 'win32') {
-      result = target === 'cursor'
+      result = target === 'cursor' || hook.shell === 'powershell'
         ? spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', hook.command], { encoding: 'utf8', input: '{}' })
         : spawnSync(hook.command_windows || hook.command, { shell: true, encoding: 'utf8', input: '{}' });
     } else result = spawnSync('/bin/sh', ['-c', hook.command], { encoding: 'utf8', input: '{}' });
@@ -227,9 +227,57 @@ test('upgrade removes only Nail’s legacy Stop entry; skills-only mode removes 
   await put(file, config); await put(manifestFile, manifest);
   await install('claude', options);
   assert.deepEqual((await json(file)).hooks.Stop, [unrelated]);
-  assert.equal((await json(file)).hooks.SessionStart[0].hooks[0].command, 'node');
+  assert.match((await json(file)).hooks.SessionStart[0].hooks[0].command, /^node .+nail\.mjs/);
   await install('claude', { ...options, skillsOnly: true });
   assert.deepEqual((await json(file)).hooks, { Stop: [unrelated] });
+});
+
+test('update repairs a stripped Claude hook, backs up settings, and keeps Cursor reuse', async t => {
+  const options = await setup(t);
+  await install('claude', options);
+  await install('cursor', { ...options, reuseClaudeSkills: true });
+  await install('codex', { ...options, skillsOnly: true });
+  const file = path.join(options.home, '.claude/settings.json');
+  const manifestFile = path.join(options.home, '.nail/installations/claude.json');
+  const config = await json(file), manifest = await json(manifestFile);
+  const cli = path.join(options.packageRoot, 'bin/nail.mjs');
+  const legacy = { hooks: [{ type: 'command', command: 'node', timeout: 5 }] };
+  const unrelated = { hooks: [{ type: 'command', command: 'node /tools/unrelated.mjs' }] };
+  config.hooks = { SessionStart: [legacy, unrelated], Stop: [legacy, legacy] };
+  manifest.entries = ['SessionStart', 'Stop'].map(event => ({
+    event, entry: { hooks: [{ ...legacy.hooks[0], args: [cli, 'hook', '--target', 'claude', '--event', event] }] },
+  }));
+  await put(file, config);
+  await put(manifestFile, manifest);
+  const updatedTemplate = path.join(options.packageRoot, 'skills/nail-performance-review-setup/SKILL.md');
+  await writeFile(updatedTemplate, 'Updated setup instructions.');
+  const original = await readFile(file, 'utf8');
+  const preview = await updateInstallations({ ...options, dryRun: true });
+  assert.deepEqual(preview.errors, []);
+  assert.ok(preview.updated.some(item => item.target === 'cursor'));
+  assert.equal(await readFile(file, 'utf8'), original);
+  const result = await updateInstallations(options);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.updated.find(item => item.target === 'codex').mode, 'skills-only');
+  const claude = result.updated.find(item => item.target === 'claude');
+  assert.equal(await readFile(claude.backup, 'utf8'), original);
+  assert.match(claude.warnings.join(' '), /Bare Node hook in Stop/);
+  const repaired = await json(file);
+  assert.deepEqual(repaired.hooks.Stop, [legacy, legacy]);
+  assert.equal(repaired.hooks.SessionStart.length, 2);
+  assert.deepEqual(repaired.hooks.SessionStart[0], unrelated);
+  for (const event of ['SessionStart', 'UserPromptSubmit']) {
+    const hook = repaired.hooks[event].at(-1).hooks[0];
+    assert.match(hook.command, /nail\.mjs/);
+    assert.equal(Object.hasOwn(hook, 'args'), false);
+  }
+  const next = await updateInstallations(options);
+  assert.equal(next.updated.find(item => item.target === 'claude').backup, undefined);
+  assert.deepEqual(await json(file), repaired);
+  assert.match((await inspectInstallations(options)).find(item => item.target === 'claude').issues.join(' '), /Bare Node hook in Stop/);
+  const cursor = await json(path.join(options.home, '.nail/installations/cursor.json'));
+  assert.equal(cursor.reuseClaudeSkills, true);
+  assert.equal(cursor.files.length, 1);
 });
 
 test('Cursor can reuse installed Claude skills, owns its rule, and detects a missing dependency', async t => {

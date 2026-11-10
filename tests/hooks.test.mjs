@@ -55,6 +55,42 @@ test('end hooks never retry, block, or ingest a supplied transcript', async (t) 
   assert.equal((await readFile(path.join(options.root, 'profile.md'), 'utf8')).includes('million dollars'), false);
 });
 
+test('Claude checks current milestone reports without copying prompts, blocking, or broadening opt-in', async t => {
+  const options = await setup(t);
+  const check = (prompt, extra = {}) => runHook('claude', 'UserPromptSubmit',
+    { cwd: options.workspace, prompt, transcript_path: 'never-read.jsonl', ...extra }, options);
+  const review = 'Readiness review for private-project is done. I identified two blockers.';
+  assert.deepEqual(await check(review), {});
+  await setTracking({ ...options, cwd: options.workspace, enable: true });
+  for (const prompt of [review, 'I helped another team find the root cause and they fixed it.']) {
+    const result = await check(prompt);
+    assert.deepEqual(Object.keys(result), ['hookSpecificOutput']);
+    assert.equal(result.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
+    assert.match(result.hookSpecificOutput.additionalContext, /before the final reply/i);
+    assert.doesNotMatch(JSON.stringify(result), /private-project|two blockers|never-read/);
+  }
+  for (const prompt of ['How does the readiness probe work?', 'Write a birthday message.', '/done', null]) {
+    assert.deepEqual(await check(prompt), {});
+  }
+  assert.deepEqual(await check(review, { permission_mode: 'plan' }), {});
+  assert.deepEqual(await check(review, { workspace_roots: [options.workspace] }), {});
+  await setTracking({ ...options, cwd: options.workspace, enable: false });
+  assert.deepEqual(await check(review), {});
+});
+
+test('tracking status distinguishes an exact opted-in folder from a subfolder', async t => {
+  const options = await setup(t);
+  const child = path.join(options.workspace, 'child');
+  await mkdir(child);
+  const cli = path.resolve('bin/nail.mjs');
+  const env = { ...process.env, NAIL_HOME: options.home, NAIL_CONFIG: path.join(options.home, 'nail/config.json') };
+  const status = cwd => JSON.parse(execFileSync(process.execPath, [cli, 'tracking', '--status', '--cwd', cwd], { encoding: 'utf8', env }));
+  assert.equal(status(options.workspace).enabled, false);
+  await setTracking({ ...options, cwd: options.workspace, enable: true });
+  assert.deepEqual(status(options.workspace), { workspace: options.workspace, enabled: true, record: 'work' });
+  assert.equal(status(child).enabled, false);
+});
+
 test('missing or broken configuration leaves user work running', async (t) => {
   const options = await setup(t);
   assert.deepEqual(await runHook('codex', 'SessionStart', {}, { root: path.join(options.root, 'missing') }), {});

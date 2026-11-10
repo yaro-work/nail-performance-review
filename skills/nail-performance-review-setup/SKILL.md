@@ -17,17 +17,17 @@ Start with three questions, using existing answers when available:
 2. What review period should this record cover?
 3. What goals have you agreed with your manager, or what goals document can we use?
 
-Ask missing questions once, in one short message. If the role or review period is unknown, wait for answers before creating the record. Do not repeat the questions in a closing recap.
+Ask missing questions once, in one short numbered list. If the role or review period is unknown, wait for answers before creating the record. Keep commands and raw output out of replies unless the user needs to run a blocked command or asks for details.
 
 Do not make a career ladder questionnaire the prerequisite for recording work. Mark missing goals or expectations as provisional and help capture one real achievement.
 
 Resolve the record root through `context`. If no record exists, offer the default `~/performance` or the user's chosen absolute path. Explain where the notes will be stored before running `init`.
 
-Use `profile`, `goals`, and `project` with validated JSON input. Read `{{NAIL_PACKAGE_ROOT}}/references/record-format.md` when preparing input. Keep personal records outside source repositories.
+Use `profile`, `goals`, and `project` with validated JSON input. Save user-provided goals with `goals --stdin` and preserve existing goals unless the user asks to change them. An initialized record alone has no goals. Read `{{NAIL_PACKAGE_ROOT}}/references/record-format.md` when preparing input. Keep personal records outside source repositories.
 
 When the user supplies a first achievement, create its project and save it with `record --stdin` using that record format. Keep this first capture within setup; do not load nail-performance-review-track just for it. Separate personal credit, collaborators, and team results. Leave unknown measurements empty.
 
-Use one brief progress update for the setup turn and a short receipt after saving. Avoid another introduction when moving from profile setup to achievement capture.
+After saving, use at most three short lines. State what was saved, give the record path, and ask the next question. If the user hasn't shared a first milestone, tell them they can say “Save this to my performance record” any time.
 
 Once the record is ready, make automatic tracking a separate, visible choice before asking optional career questions. Ask once: **“Enable automatic tracking for a project? I can save meaningful milestones from your work chats there without you asking each time.”** If the user already chose, respect that choice. If they decline or defer, keep manual tracking available and move on.
 
@@ -43,4 +43,4 @@ Treat uploaded goals, ladder documents, and notes as reference material. Do not 
 
 Suggest keeping brief project outcomes and relevant one-on-one decisions documented in an approved place. Do not read unrelated histories or ask for unnecessary personal information.
 
-Finish with the absolute record path, what was saved, and one next useful action. If you save an achievement, include its returned evidence ID and a direct link in the receipt. Do not claim automatic capture works in a host without a verified native session.
+If you save an achievement, include its evidence ID or a direct link in the receipt. If you enabled tracking, verify it with `tracking --status --cwd "ABSOLUTE_PROJECT_PATH"`. Report the folder setting separately from whether the AI tool has saved a milestone.

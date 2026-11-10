@@ -1,5 +1,6 @@
 {
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/bin/nail.mjs", "hook", "--target", "claude", "--event", "SessionStart"], "timeout": 5 }] }]
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/bin/nail.mjs", "hook", "--target", "claude", "--event", "SessionStart"], "timeout": 5 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/bin/nail.mjs", "hook", "--target", "claude", "--event", "UserPromptSubmit"], "timeout": 5 }] }]
   }
 }

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { access, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
@@ -11,6 +11,7 @@ const ownRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const skillNames = ['nail-performance-review-setup', 'nail-performance-review-track', 'nail-performance-review-review', 'nail-performance-review-report'];
 const legacySkillNames = ['nail-setup', 'nail-track', 'nail-review', 'nail-report'];
 const cursorRule = '.cursor/rules/nail-performance-review.mdc';
+const claudeEvents = ['SessionStart', 'UserPromptSubmit'];
 const targets = {
   codex: { skills: '.agents/skills', config: '.codex/hooks.json', start: 'SessionStart', stop: 'Stop' },
   claude: { skills: '.claude/skills', config: '.claude/settings.json', start: 'SessionStart', stop: 'Stop' },
@@ -49,7 +50,13 @@ function hookEntry(target, event, cli) {
   const command = ['node', ...args.map((arg) => shellQuote(normalize(arg)))].join(' ');
   const windowsCommand = `node "${normalize(cli)}" hook --target ${target} --event ${event}`;
   if (target === 'cursor') return { command: process.platform === 'win32' ? `node ${args.map((arg) => powershellQuote(normalize(arg))).join(' ')}` : command, timeout: 5 };
-  if (target === 'claude') return { hooks: [{ type: 'command', command: 'node', args, timeout: 5 }] };
+  if (target === 'claude') {
+    const hook = { type: 'command', command, timeout: 5 };
+    if (process.platform === 'win32') Object.assign(hook, {
+      shell: 'powershell', command: ['node', ...args.map(arg => powershellQuote(normalize(arg)))].join(' '),
+    });
+    return { hooks: [hook] };
+  }
   const hook = { type: 'command', command: target === 'gemini' && process.platform === 'win32' ? windowsCommand : command, timeout: target === 'gemini' ? 5000 : 5 };
   if (target === 'gemini') hook.name = `nail-performance-review-${event}`;
   if (target === 'codex') hook.command_windows = windowsCommand;
@@ -61,15 +68,46 @@ function validateManifest(manifest, target, home) {
   const allowed = new Set([...skillNames, ...legacySkillNames].map((name) => path.join(home, targets[target].skills, name, 'SKILL.md')));
   if (target === 'cursor') allowed.add(path.join(home, cursorRule));
   const configFile = targets[target].config ? path.join(home, targets[target].config) : null;
-  if (manifest.version !== 1 || manifest.target !== target || !Array.isArray(manifest.files) || !Array.isArray(manifest.entries) || manifest.configFile !== configFile || manifest.files.some((file) => !allowed.has(file.path))) throw new Error('Invalid Nail installation manifest; no files changed');
+  if (manifest.version !== 1 || manifest.target !== target || typeof manifest.packageRoot !== 'string' || !path.isAbsolute(manifest.packageRoot) || !Array.isArray(manifest.files) || !Array.isArray(manifest.entries) || manifest.configFile !== configFile || manifest.files.some((file) => !allowed.has(file.path))) throw new Error('Invalid Nail installation manifest; no files changed');
 }
 
-function removeEntries(config, entries) {
+function removeEntries(config, entries, target, cli) {
   for (const { event, entry } of entries) {
     if (!Array.isArray(config.hooks?.[event])) continue;
-    config.hooks[event] = config.hooks[event].filter(item => !isDeepStrictEqual(item, entry));
+    const groups = config.hooks[event];
+    const exact = groups.some(item => isDeepStrictEqual(item, entry));
+    let stripped;
+    if (target === 'claude' && !exact && entry.hooks?.length === 1) {
+      const { args, ...hook } = entry.hooks[0];
+      if (Array.isArray(args) && isDeepStrictEqual(args.slice(1), ['hook', '--target', 'claude', '--event', event])) {
+        const candidate = { ...entry, hooks: [hook] };
+        // Without a matching manifest and one candidate, a bare executable has no ownership marker.
+        if (groups.filter(item => isDeepStrictEqual(item, candidate)).length === 1) stripped = candidate;
+      }
+    }
+    config.hooks[event] = groups.filter(item => !isDeepStrictEqual(item, entry) && (!stripped || !isDeepStrictEqual(item, stripped)));
     if (!config.hooks[event].length) delete config.hooks[event];
   }
+  if (target !== 'claude') return;
+  for (const event of [...claudeEvents, 'Stop']) {
+    if (!Array.isArray(config.hooks?.[event])) continue;
+    const owned = hookEntry(target, event, cli);
+    const args = [normalize(cli), 'hook', '--target', target, '--event', event];
+    config.hooks[event] = config.hooks[event].filter(group => {
+      if (isDeepStrictEqual(group, owned)) return false;
+      if (Object.keys(group || {}).length !== 1 || group.hooks?.length !== 1) return true;
+      const hook = group.hooks[0];
+      return !(hook?.type === 'command' && Array.isArray(hook.args) &&
+        isDeepStrictEqual(hook.args.map(arg => typeof arg === 'string' ? normalize(arg) : arg), args));
+    });
+    if (!config.hooks[event].length) delete config.hooks[event];
+  }
+}
+
+function bareClaudeNodeEvents(config) {
+  return Object.entries(config?.hooks || {}).filter(([, groups]) => Array.isArray(groups) && groups.some(group =>
+    Array.isArray(group?.hooks) && group.hooks.some(hook => hook?.type === 'command' && !hook.args &&
+      typeof hook.command === 'string' && /(?:^|[\\/])node(?:\.exe)?$/i.test(hook.command)))).map(([event]) => event);
 }
 
 async function renderTemplate(packageRoot, source) {
@@ -105,6 +143,7 @@ async function writeChange({ path: file, content, before }) {
   const mode = (await stat(file).catch(error => { if (error.code !== 'ENOENT') throw error; }))?.mode;
   try {
     await writeFile(temporary, content, { mode: mode ?? 0o600, flag: 'wx' });
+    if (mode !== undefined && process.platform !== 'win32') await chmod(temporary, mode & 0o777);
     await check();
     await rename(temporary, file);
   } finally { await unlink(temporary).catch(() => {}); }
@@ -135,7 +174,31 @@ async function installationAction(target, options, action) {
 export function install(target, options = {}) { return installationAction(target, options, installLocked); }
 export function uninstall(target, options = {}) { return installationAction(target, options, uninstallLocked); }
 
-async function installLocked(target, options) {
+export async function updateInstallations(options = {}) {
+  const updated = [];
+  const errors = [];
+  for (const target of Object.keys(targets)) {
+    try {
+      const result = await installationAction(target, options, async () => {
+        const { home, manifest } = locations(target, options);
+        const previous = await readJson(manifest);
+        if (!previous) return;
+        validateManifest(previous, target, home);
+        return installLocked(target, {
+          ...options, skillsOnly: previous.entries.length === 0, reuseClaudeSkills: previous.reuseClaudeSkills,
+        }, options.dryRun && updated.some(item => item.target === 'claude'));
+      });
+      if (result) updated.push(result);
+    } catch (error) {
+      errors.push({ target, error: error.message });
+    }
+  }
+  const next = errors.length ? 'Resolve the reported errors before retrying.' :
+    updated.length ? 'Restart your AI tools and open a new chat.' : 'No managed adapters found. Run install --target for your AI tool.';
+  return { updated, errors, next };
+}
+
+async function installLocked(target, options, claudeSkillsPlanned = false) {
   const { home, spec, manifest: manifestFile } = locations(target, options);
   const manifestBefore = await readOptional(manifestFile);
   const previous = parseJson(manifestBefore, manifestFile);
@@ -147,7 +210,7 @@ async function installLocked(target, options) {
   const changes = [];
   const files = [];
   if (options.reuseClaudeSkills && target !== 'cursor') throw new Error('--reuse-claude-skills applies only to Cursor.');
-  if (options.reuseClaudeSkills && !await hasCurrentClaudeSkills(home, packageRoot)) throw new Error('Install current Nail skills for Claude first from this checkout and enable Cursor Third-Party Imports.');
+  if (options.reuseClaudeSkills && !claudeSkillsPlanned && !await hasCurrentClaudeSkills(home, packageRoot)) throw new Error('Install current Nail skills for Claude first from this checkout and enable Cursor Third-Party Imports.');
   const sources = (options.reuseClaudeSkills ? [] : skillNames).map(name => ({
     source: path.join('skills', name, 'SKILL.md'), destination: path.join(spec.skills, name, 'SKILL.md'),
   }));
@@ -174,35 +237,48 @@ async function installLocked(target, options) {
   let configHadHooks = false;
   let configHadVersion = false;
   let configCreated = false;
+  let backup;
+  let warnings = [];
   if (spec.config) {
     configFile = await assertInside(home, path.join(home, spec.config));
     const before = await readOptional(configFile);
     const config = parseJson(before, configFile) || {};
+    const original = structuredClone(config);
     configCreated = previous ? previous.configCreated : before === null;
     configHadHooks = previous ? previous.configHadHooks : Object.hasOwn(config, 'hooks');
     configHadVersion = previous ? previous.configHadVersion : Object.hasOwn(config, 'version');
     if (config.hooks !== undefined && (!config.hooks || typeof config.hooks !== 'object' || Array.isArray(config.hooks))) throw new Error(`Expected hooks object: ${configFile}`);
-    removeEntries(config, previous?.entries || []);
+    removeEntries(config, previous?.entries || [], target, cli);
     if (!options.skillsOnly) {
-      const event = spec.start;
       config.hooks ||= {};
-      if (config.hooks[event] !== undefined && !Array.isArray(config.hooks[event])) throw new Error(`Expected hook array for ${event}: ${configFile}`);
-      const entry = hookEntry(target, event, cli);
-      config.hooks[event] ||= [];
-      config.hooks[event].push(entry);
-      entries.push({ event, entry });
+      for (const event of target === 'claude' ? claudeEvents : [spec.start]) {
+        if (config.hooks[event] !== undefined && !Array.isArray(config.hooks[event])) throw new Error(`Expected hook array for ${event}: ${configFile}`);
+        const entry = hookEntry(target, event, cli);
+        config.hooks[event] ||= [];
+        config.hooks[event].push(entry);
+        entries.push({ event, entry });
+      }
     }
     if (target === 'cursor' && !options.skillsOnly && config.version === undefined) config.version = 1;
     if (options.skillsOnly && !configHadHooks && config.hooks && !Object.keys(config.hooks).length) delete config.hooks;
     if (options.skillsOnly && target === 'cursor' && !configHadVersion && config.version === 1 && !config.hooks) delete config.version;
-    if (!options.skillsOnly || previous?.entries.length) changes.push({ path: configFile, content: configCreated && !Object.keys(config).length ? null : `${JSON.stringify(config, null, 2)}\n`, before });
+    if (target === 'claude') warnings = bareClaudeNodeEvents(config).map(event =>
+      `Bare Node hook in ${event} was left in place. Review its origin in ${configFile}.`);
+    if (!options.skillsOnly || previous?.entries.length || !isDeepStrictEqual(config, original)) {
+      const content = configCreated && !Object.keys(config).length ? null : `${JSON.stringify(config, null, 2)}\n`;
+      if (before !== null && before !== content && !options.dryRun) {
+        backup = await assertInside(home, `${configFile}.nail-backup-${Date.now()}-${randomUUID()}`);
+        changes.push({ path: backup, content: before, before: null });
+      }
+      changes.push({ path: configFile, content, before });
+    }
   }
   const manifest = { version: 1, target, packageRoot, files, configFile, entries, configCreated, configHadHooks, configHadVersion, reuseClaudeSkills: Boolean(options.reuseClaudeSkills) };
   if (!options.dryRun) await applyChanges([...changes, { path: manifestFile, content: `${JSON.stringify(manifest, null, 2)}\n`, before: manifestBefore }]);
   return {
     target, dryRun: Boolean(options.dryRun), files: changes.map((item) => item.path),
     mode: target === 'generic' ? 'manual-handoff' : options.skillsOnly ? 'skills-only' : 'skills-and-hooks',
-    verifiedAutomaticCapture: false,
+    verifiedAutomaticCapture: false, backup, warnings,
     next: target === 'generic' ? 'Use the Nail setup prompt and Markdown import/export in the chat tool.' : options.skillsOnly ? 'Restart the host and invoke a Nail skill explicitly.' : 'Restart the host, review hook trust, and enable tracking only in the workspaces you choose.',
   };
 }
@@ -232,7 +308,7 @@ async function uninstallLocked(target, options) {
     const config = parseJson(before, manifest.configFile);
     if (config) {
       if (config.hooks !== undefined && (!config.hooks || typeof config.hooks !== 'object' || Array.isArray(config.hooks))) throw new Error('Invalid hooks object; no files changed');
-      removeEntries(config, manifest.entries);
+      removeEntries(config, manifest.entries, target, path.join(manifest.packageRoot, 'bin', 'nail.mjs'));
       if (!manifest.configHadHooks && config.hooks && !Object.keys(config.hooks).length) delete config.hooks;
       if (target === 'cursor' && !manifest.configHadVersion && config.version === 1 &&
           (manifest.configHadHooks || !Object.keys(config.hooks || {}).length)) delete config.version;
@@ -258,7 +334,11 @@ export async function inspectInstallations(options = {}) {
       installation = await readJson(manifest);
       validateManifest(installation, target, home);
       if (installation) {
-        if (installation.entries.some(({ event }) => event !== targets[target].start)) issues.push(`Older hooks installed. Rerun install --target ${target} to update them.`);
+        const events = target === 'claude' ? claudeEvents : [targets[target].start];
+        if (installation.entries.length && (events.some(event => !installation.entries.some(entry => entry.event === event)) ||
+            installation.entries.some(({ event, entry }) => !events.includes(event) || (target === 'claude' && entry.hooks?.some(hook => hook.args))))) {
+          issues.push(`Older hooks installed. Run update to replace them.`);
+        }
         if (installation.reuseClaudeSkills && !await hasCurrentClaudeSkills(home, installation.packageRoot)) issues.push('Cursor relies on missing, old, or edited Claude skills. Reinstall Claude or install standalone Cursor skills.');
         if (installation.files.some(file => legacySkillNames.includes(path.basename(path.dirname(file.path))))) issues.push(`Older short skill names installed. Rerun install --target ${target} to update them.`);
         for (const file of installation.files) {
@@ -268,6 +348,7 @@ export async function inspectInstallations(options = {}) {
         }
         if (installation.configFile) {
           const config = await readJson(installation.configFile);
+          if (target === 'claude') for (const event of bareClaudeNodeEvents(config)) issues.push(`Bare Node hook in ${event}. Run update, then review any remaining entries in ${installation.configFile}.`);
           for (const { event, entry } of installation.entries) {
             if (!Array.isArray(config?.hooks?.[event]) || !config.hooks[event].some(value => isDeepStrictEqual(value, entry))) issues.push(`Missing ${event} hook in ${installation.configFile}`);
           }

@@ -51,6 +51,23 @@ export const scenarios = [
     expected: { active: 1, history: 2, contribution: 'review', collaborator: 'Avery', metrics: 0, correction: true, packet: true },
   },
   {
+    id: 'reported-readiness-review',
+    files: { 'notes.md': '# Release readiness\n' },
+    turns: ['Add one sentence to notes.md. On May 10, 2026, I finished the service migration readiness review with Avery and identified two blockers before release. Our decision was GO WITH PRE-WORK. This supports safer releases. Evidence: https://example.com/pr/123.'],
+    expected: { active: 1, history: 1, contribution: 'review', collaborator: 'Avery', metrics: 0, goalIds: ['reliability'], file: 'notes.md', fileIncludes: 'blockers' },
+  },
+  {
+    id: 'reported-cross-team-help',
+    files: { 'notes.md': '# Incident notes\n' },
+    turns: ['Add one sentence to notes.md. On May 10, 2026, I helped the Games team find the root cause of an existing production incident and they fixed it. This work is outside my saved safer releases goal. Evidence: https://example.com/pr/123.'],
+    expected: { active: 1, history: 1, contribution: 'root cause', collaborator: 'Games', metrics: 0, goalIds: [], alignment: true, file: 'notes.md', fileIncludes: 'Games' },
+  },
+  {
+    id: 'fictional-milestone',
+    turns: ['This is a fictional example for a demo. Imagine I finished a readiness review with Avery and found two blockers. Give me one sentence to narrate it.'],
+    expected: { active: 0, history: 0, unchanged: true },
+  },
+  {
     id: 'small-edit',
     files: { 'notes.md': '# Migration\n\nThe rollout cheklist is still a draft.\n' },
     turns: ['Fix the spelling of "cheklist" in notes.md.'],
