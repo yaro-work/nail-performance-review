@@ -19,7 +19,7 @@ When the user shares goals, a career ladder, 1:1 notes, a prior review, or manag
 
 ## Set up the record
 
-Start with three questions, using existing answers when available:
+Start with one line about local storage and your AI tool’s data policies. Then ask only the unanswered questions below. End with the optional documents and tracking choice. Leave achievement examples and internal diagnostics for later.
 
 1. What is your role and current level, if your organization uses levels?
 2. What review period should this record cover?
@@ -39,7 +39,7 @@ Use `profile`, `goals`, and `project` with validated JSON input. Save user-provi
 
 When the user supplies a first achievement, create its project and save it with `record --stdin` using that record format. Keep this first capture within setup; do not load nail-performance-review-track just for it. Separate personal credit, collaborators, and team results. Leave unknown measurements empty.
 
-After saving, use up to three short lines in this order: **Saved** with counts and the record path, **Tracking** with the active mode and any document schedules, then **Next** with at most one question or action. Add the schedule opt-out sentence if you registered links. Summarize by default and list individual entries only on request. If nothing needs action, omit **Next**.
+After saving, aim for 60 words. Use up to three short lines: **Saved** with counts and the record path, **Tracking** with the active mode and any document schedules, then **Next** with at most one question or action. Add the schedule opt-out sentence if you registered links. List individual entries only on request. If nothing needs action, omit **Next**.
 
 For a first record, use `init` for all-folder tracking. Use `init --manual` if the user chose selected folders, manual capture, or a skills-only install. An existing record keeps its tracking settings. Tell the user which mode is active after setup.
 
