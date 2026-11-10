@@ -17,7 +17,7 @@ Respect host plan or read-only mode. Do not write performance notes while writes
 
 During authorized work, save a candidate before the final response when the user started a concrete task, made a useful change, or reached an actionable diagnosis. A short session counts. Use `state: in-progress` when real work began and `delivered` when a change or finding was delivered. A factual report counts even if the user only asks you to update a note. Use `basis: reported` for facts the user reports. Save fictional work only on request in a separate test record.
 
-Skip requests with no work started, speculative plans, purely cosmetic edits, unrelated personal activity, and record maintenance. Do not copy raw transcripts. Keep automatic notes quiet, except when an eligible coaching question would materially help.
+Skip requests with no work started, speculative plans, spelling or formatting-only edits, unrelated personal activity, and record maintenance. Do not copy raw transcripts. Keep automatic notes quiet, except when an eligible coaching question would materially help.
 
 For routine edits, give the normal task response without announcing the tracking decision unless the user asks.
 
@@ -25,7 +25,7 @@ Keep tracking updates focused on the user's result. Avoid internal skill names, 
 
 Use `record --stdin` with the shape in `{{NAIL_PACKAGE_ROOT}}/references/record-format.md`. Set `reviewStatus: candidate` for automatic notes. Add one or two sentences of `context` about the problem and what happened. Copy the exact `sessionId` and source from the hook when supplied. Leave the ID out if unknown. Keep paths, credentials, and transcripts out of these fields.
 
-Check existing evidence for the project before creating a note. If this is new progress on the same work, amend the current note. Keep separate contributions separate even within one session. Reuse the event ID for a retry of the same write. An explicit “save this to my performance record” can create an included note or include the existing candidate.
+Check existing evidence for the project before creating a note. Amend a pending candidate when the same work progresses. If the entry was already reviewed, keep it and save only the new progress as a separate candidate. Keep distinct contributions separate, even within one session. Reuse the event ID for a retry of the same write. An explicit “save this to my performance record” can create an included note or include the existing candidate.
 
 Separate the person's contribution, collaborators, and team outcome. Distinguish in-progress work, delivery, and measured impact. Label observations, user reports, and inferences honestly.
 

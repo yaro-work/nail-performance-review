@@ -38,7 +38,7 @@ export function grade(expected, observed) {
     if (expected.candidate) {
       check('candidate saves brief context and the actual host session', observed.active.every(r =>
         r.reviewStatus === 'candidate' && r.state === expected.candidate && r.context && r.sessionId === observed.session));
-      check('review keeps candidates pending', observed.packet.includes('1 candidate entries') &&
+      check('review keeps candidates pending', observed.packet.includes('1 candidate entry') &&
         observed.active.every(r => !observed.packet.includes(r.id)));
       check('native prompt hook sent a reminder', observed.hooks.some(h => h.event === 'UserPromptSubmit' && h.ok && h.context));
     }

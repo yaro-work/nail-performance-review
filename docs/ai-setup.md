@@ -18,8 +18,11 @@ For local Claude Code with Git and Node.js 22 or later, the paste command is:
 
 If a required program is missing, give one official download link and wait. For an existing terminal install of Claude, use the [switching steps](install.md#install-through-claude-code) to avoid duplicate skills and hooks.
 
-1. For Codex, Cursor, or Gemini CLI, check Git and Node.js 22 or later. Reuse the clone if present. Use the matching [terminal command](../README.md#install-it). Check the result before proceeding.
+1. For Codex, Cursor, or Gemini CLI, check Git and Node.js 22 or later. Reuse the clone if present. Run the matching [terminal command](../README.md#install-it) and check the result. Group these operations in one tool call when possible. Preview only if asked.
 2. If a command is blocked, use the reply above and wait for the result. Keep the existing permissions.
-3. If trust is pending, give the single trust action first. Once installed, reply “Installed for TOOL. Open a new chat and say ‘Help me set up my performance record.’”
+3. After installing or updating Codex hooks, reply “Open `/hooks` and trust the nail-performance-review hooks.” Wait for the user to confirm. For any other pending trust step, give that action first.
+4. When setup can begin, reply “Installed for TOOL. Open a new chat and say ‘Help me set up my performance record.’”
+
+Do not narrate prerequisites, file writes, or verification. If your host requires an opening update, say only “Checking setup.” Use no further progress messages during these short steps.
 
 Use the [setup skill](../skills/nail-performance-review-setup/SKILL.md) after installation. Its short questionnaire covers role, period, and goals. For an existing installation, use the [update steps](../README.md#update-it).

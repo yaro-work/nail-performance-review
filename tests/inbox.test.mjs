@@ -26,7 +26,7 @@ test('quick-session candidates stay private until included, and corrections pres
   assert.equal(corrected.context, provenance.context);
   assert.deepEqual(cli(['inbox']).map(item => item.id), [corrected.id]);
   const report = path.join(directory, 'report.html'), exported = path.join(directory, 'export.md');
-  assert.match(run(['review']), /1 candidate entries/);
+  assert.match(run(['review']), /1 candidate entry/);
   assert.doesNotMatch(run(['review']), /stale cache error/);
   cli(['report', '--output', report]);
   cli(['export', '--output', exported]);
@@ -37,6 +37,9 @@ test('quick-session candidates stay private until included, and corrections pres
   assert.deepEqual(cli(['inbox']), []);
   assert.match(run(['review']), /Diagnosed a stale cache error/);
   assert.doesNotMatch(run(['review']), /quick-session-012/);
+  assert.throws(() => cli(['amend', '--stdin'], { ...work, ...provenance, supersedes: included.id }),
+    /already been reviewed/);
+  assert.match(run(['review']), /Diagnosed a stale cache error/);
   const excluded = cli(['triage', '--id', included.id, '--action', 'exclude']);
   assert.doesNotMatch(run(['review']), /stale cache error/);
   assert.deepEqual(cli(['inbox', '--action', 'excluded']).map(item => item.id), [excluded.id]);

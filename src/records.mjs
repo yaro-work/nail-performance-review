@@ -10,6 +10,12 @@ const headings = { contribution: 'Contribution', outcome: 'Outcome', collaborato
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 export const validSessionId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(value);
 export const isIncludedEvidence = record => record.reviewStatus === undefined || record.reviewStatus === 'included';
+
+function checkCandidateAmendment(parent, replacement) {
+  if (replacement.reviewStatus === 'candidate' && parent.reviewStatus !== 'candidate') {
+    throw new Error('This entry has already been reviewed. Save new progress as a separate candidate.');
+  }
+}
 export function object(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected a JSON object.');
   return value;
@@ -254,6 +260,7 @@ export async function listEvidence(root, { start, end, includeSuperseded = false
       seen.add(current.id);
       const parent = ids.get(current.supersedes);
       if (!parent || parent.project !== record.project) throw new Error(`Missing or unrelated correction target: ${current.supersedes}`);
+      checkCandidateAmendment(parent, current);
       current = parent;
     }
   }
@@ -280,6 +287,7 @@ async function saveEvidenceUnlocked(root, input, { amendment = false } = {}) {
   if (amendment) {
     if (!parent || parent.project !== value.project) throw new Error('Correction target is missing or belongs to another project.');
     if (all.some(record => record.supersedes === value.supersedes)) throw new Error('This record already has a correction. Amend the latest correction instead.');
+    checkCandidateAmendment(parent, value);
   }
   const record = { ...value, id: value.id || randomUUID(), recordedAt: new Date().toISOString() };
   const file = await assertInside(root, path.join(root, 'years', record.date.slice(0, 4), 'evidence', `${record.id}.md`));
@@ -362,7 +370,9 @@ export async function importBundle(root, content) {
         if (!isDeepStrictEqual(clean(old), record)) throw new Error('Conflicting handoff record.');
       }
       if (record.supersedes && !old) {
-        if (corrections.has(record.supersedes) || staged.get(record.supersedes)?.project !== record.project) throw new Error('Conflicting or unrelated handoff correction.');
+        const parent = staged.get(record.supersedes);
+        if (corrections.has(record.supersedes) || parent?.project !== record.project) throw new Error('Conflicting or unrelated handoff correction.');
+        checkCandidateAmendment(parent, record);
         corrections.set(record.supersedes, record.id);
       }
       staged.set(record.id, record);

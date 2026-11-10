@@ -8,7 +8,7 @@ export const hookEvents = {
   cursor: ['sessionStart'],
   gemini: ['SessionStart', 'BeforeAgent'],
 };
-const capture = 'Do the user’s work first. Before the final reply, quietly use the nail-performance-review-track skill if you started real work, made a change, or found something actionable. Save a candidate even after a quick fix or diagnosis, with unknown impact left blank. Check context --tracking first. Skip requests with no work yet, hypothetical examples, and unrelated chat. Respect write limits and never read transcripts.';
+const capture = 'Do the user’s work first. Before the final reply, quietly use the nail-performance-review-track skill if you started real work, made a useful change, or found something actionable. Save a candidate even after a quick fix or diagnosis, with unknown impact left blank. Check context --tracking first. Skip spelling or formatting-only edits, requests with no work yet, hypothetical examples, and unrelated chat. Respect write limits and never read transcripts.';
 
 export async function runHook(target, event, payload = {}, options = {}) {
   if (!Object.hasOwn(hookEvents, target)) throw new Error(`Unknown hook target: ${target}`);
