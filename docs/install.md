@@ -83,6 +83,22 @@ Keep the cloned repository at its installed location. The adapter uses its local
 
 </details>
 
+### Install through Claude Code
+
+Use this option in a local Claude Code session. Install Git and Node.js 22 or later. Claude Code 2.1.275 and later can add the marketplace and install in one step.
+
+1. If you installed Claude with the Nail CLI, close Claude Code and remove that adapter from its clone with `node bin/nail.mjs uninstall --target claude`. Your records remain in place. If Cursor reused those Claude skills, reinstall the standalone Cursor adapter with `node bin/nail.mjs install --target cursor`.
+2. In Claude Code, enter the command below and review the marketplace source. Choose **User** scope to keep the installation personal.
+3. Open a new chat and say **“Help me set up my performance record.”** Enable automatic tracking only for the project folders you choose.
+
+```text
+/plugin install nail-performance-review --marketplace yaro-work/nail-performance-review
+```
+
+Use `/plugin` to confirm the plugin is installed and enabled. Nail's `doctor` reports terminal-managed adapters, so use the Claude panel for this installation. To update, choose **Update now** under **Installed**. To opt into Claude's automatic updates, enable them for the marketplace under **Marketplaces**. [Claude Code plugin management](https://code.claude.com/docs/en/discover-plugins)
+
+Claude may still ask before writing to your private record or opening an external document. If auto mode blocks an operation, review it in Claude's **Recently blocked** permission list. [Claude Code permission modes](https://code.claude.com/docs/en/permission-modes#review-denials)
+
 ## Enable automatic tracking for a workspace
 
 Manual skills work as soon as they are installed. Enable automatic tracking only where your AI tool may use the selected record. Use an absolute path to the workspace root.

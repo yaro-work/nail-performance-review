@@ -1,7 +1,6 @@
 {
   "name": "nail-performance-review",
-  "version": "0.1.0",
+  "author": { "name": "yaro-work" },
   "description": "Track goals, contributions, and review evidence in a shared private Markdown directory.",
-  "skills": "./skills/",
   "hooks": "./adapters/claude/hooks.json"
 }

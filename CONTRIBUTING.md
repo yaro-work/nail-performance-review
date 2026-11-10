@@ -25,6 +25,8 @@ Submit only material you have the right to contribute, including any required em
 
 Keep native host verification separate from hook fixtures. A passing simulated hook test does not prove that a host loads a plugin.
 
+For Claude marketplace changes, run `claude plugin validate .` and install the branch in a temporary Claude profile. The Claude marketplace and plugin manifests omit a version so Claude can update by Git commit. [Claude marketplace versioning](https://code.claude.com/docs/en/plugins/host-marketplace#release-a-new-version)
+
 For skill changes, exercise the relevant [assistant scenarios](tests/assistant-scenarios.md). Report observed behavior and any scenario that could not run.
 
 For career examples, write original summaries and link to primary sources. Record the source's update date when available.
