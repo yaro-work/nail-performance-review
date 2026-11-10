@@ -122,7 +122,10 @@ Start a new chat and say **“Help me set up my performance record.”**
 
 ### Cursor and Claude Code on the same machine
 
-If your Cursor setup imports Claude Code hooks, check **Customize → Hooks** for nail-performance-review before adding Cursor hooks. If Cursor already sees both the imported hooks and skills, you can remove the duplicate Nail adapter using the [uninstall steps](#upgrade-or-uninstall). If only the hooks are imported, keep the Cursor skills. Where your organization permits the terminal adapter, run `node bin/nail.mjs install --target cursor --skills-only` from the clone to remove its duplicate hooks while keeping its skills. [Cursor hook compatibility](https://cursor.com/docs/hooks)
+If Cursor imports Claude Code hooks, check **Customize → Hooks** and **Skills** before adding another copy of Nail. [Cursor hook compatibility](https://cursor.com/docs/hooks)
+
+- If Cursor imports both, remove the extra installation. For a native install, use **Customize → Plugins**. For a terminal adapter, use the [uninstall steps](#upgrade-or-uninstall).
+- If Cursor imports only hooks, keep the skills it uses. If your existing terminal adapter added the duplicate, run `node bin/nail.mjs install --target cursor --skills-only` from the clone to remove those hooks and retain the skills.
 
 ## Enable automatic tracking for a workspace
 
