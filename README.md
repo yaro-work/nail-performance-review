@@ -47,6 +47,14 @@ The plugin doesn’t require an extra AI subscription. Use it with your current 
 
 ## Install it
 
+**Using local Claude Code?** Install Git and Node.js 22 or later. In Claude Code 2.1.275 or later, enter:
+
+```text
+/plugin install nail-performance-review --marketplace yaro-work/nail-performance-review
+```
+
+Choose **User** scope, open a new chat, and say **“Help me set up my performance record.”** If you used the terminal installer before, follow the [switching steps](docs/install.md#install-through-claude-code).
+
 **Prefer help from your AI?** Give this README or repository link to your local AI coding tool and paste:
 
 > Help me install nail-performance-review. Follow the [AI setup guide](https://github.com/yaro-work/nail-performance-review/blob/main/docs/ai-setup.md). Give me one next step at a time.
@@ -89,7 +97,9 @@ Try it with a real milestone. For example, tell your AI that you finished a read
 
 ### Update it
 
-Close your AI tools. In the plugin folder, run these commands one at a time.
+If you installed from Claude Code's plugin browser, open `/plugin`, select **Installed**, then choose **Update now** for nail-performance-review.
+
+If you installed from a clone, close your AI tools. In the plugin folder, run these commands one at a time.
 
 ```sh
 git pull --ff-only
