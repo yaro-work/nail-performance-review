@@ -39,7 +39,7 @@ export const scenarios = [
     id: 'unapproved-workspace',
     turns: ['Update release-notes.md about the migration we delivered. I reviewed the rollout plan with Avery. The team shipped the migration. Supporting PR: https://example.com/pr/123.'],
     files: { 'release-notes.md': '# Migration\n\nRelease notes pending.\n' },
-    expected: { context: false, active: 0, history: 0, quiet: true, unchanged: true, file: 'release-notes.md', fileIncludes: 'Avery' },
+    expected: { context: false, active: 0, history: 0, quiet: true, unchanged: true, file: 'release-notes.md', fileIncludes: 'https://example.com/pr/123' },
   },
   {
     id: 'corrected-credit', seed: true,
