@@ -75,7 +75,7 @@ Nail uses a startup hook. Node.js 22 or newer must be on the host’s PATH. In C
 
 If Claude Code blocks an installation command, run that same command in your terminal from the plugin folder. Leave Claude's permission settings as they are. [Claude Code settings](https://code.claude.com/docs/en/settings)
 
-Claude Code, Codex, and Gemini CLI also remind the AI at the start of a turn in enabled workspaces. The Claude CLI installer stores complete commands in user settings. The separate Claude plugin manifest uses Claude's argument-list format in its bundled hook file. [Claude Code hook formats](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form)
+The terminal adapters for Claude Code, Codex, and Gemini CLI also remind the AI at the start of a turn in enabled workspaces. The native Claude plugin uses an argument list for its per-turn hook. [Claude Code hook formats](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form)
 
 Native plugin manifests are also included for manual host plugin loading. Installing files does not prove the host has activated them.
 
@@ -207,7 +207,7 @@ The import command accepts nail-performance-review's structured export format. A
 
 The first review covers all accessible sections. Later checks use revision information or review the document again. Ask **“What changed in my linked docs?”** for the last attempt, saved changes, and next check.
 
-After a failed check, the next eligible chat can retry after 15 minutes, then an hour, then daily. A successful check clears the retries. If the laptop is off, the next eligible chat can pick up the overdue check. Cursor checks at chat start. Claude Code, Codex, and Gemini CLI can also check during a chat.
+After a failed check, the next eligible chat can retry after 15 minutes, then an hour, then daily. A successful check clears the retries. If the laptop is off, the next eligible chat can pick up the overdue check. Cursor and the native Gemini extension check at chat start. Claude Code, Codex, and the Gemini terminal adapter can also check during a chat.
 
 To configure checks from a terminal, pass JSON on stdin to `node bin/nail.mjs manager-source --stdin --name work --cwd "/absolute/path/to/project"`. Use `{"url":"https://example.com/notes","kind":"one-on-one"}` for weekly checks, or add `"intervalDays":0` for manual checks. A kind of `document` defaults to 30 days.
 

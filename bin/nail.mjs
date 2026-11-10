@@ -38,6 +38,7 @@ async function main() {
   const major = Number(process.versions.node.split('.')[0]);
   if (major < 22) throw new Error('nail-performance-review requires Node.js 22 or later.');
   const { values, positionals } = parseArgs({
+    args: process.argv.slice(2),
     allowPositionals: true,
     options: Object.fromEntries([
       ...['root', 'name', 'cwd', 'role', 'timezone', 'level', 'start', 'end', 'period', 'project', 'session', 'reason', 'action', 'note', 'days', 'target', 'event', 'output', 'input', 'id', 'notifications'].map(key => [key, { type: 'string' }]),

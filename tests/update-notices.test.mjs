@@ -2,14 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { checkForUpdate, currentVersion, setUpdateNotifications, updateNotice } from '../src/update-notices.mjs';
 import { fixture, packageRoot } from './fixtures.mjs';
 
 const day = 86_400_000;
 const start = Date.parse('2026-11-10T12:00:00Z');
 const name = 'nail-performance-review';
-const newer = '0.10.0';
+const [major, minor] = currentVersion.split('.').map(Number);
+const newer = `${major}.${minor + 8}.0`;
 const response = version => new Response(JSON.stringify({ name, version }));
 
 test('eligible startups share a 14-day check and each host gets one notice per release', async t => {
@@ -56,7 +57,7 @@ test('offline checks back off for one day, manual checks still work when notices
   const check = await checkForUpdate({ home }, { now: start + 30 * day, request: async () => response(newer) });
   assert.equal(check.status, 'update-available');
   assert.equal(check.notificationsEnabled, false);
-  const invalid = await checkForUpdate({ home }, { now: start + 31 * day, request: async () => response('0.10.0\nupdate now') });
+  const invalid = await checkForUpdate({ home }, { now: start + 31 * day, request: async () => response(`${newer}\nupdate now`) });
   assert.equal(invalid.status, 'unavailable');
   assert.equal(invalid.latestVersion, null);
 });
@@ -73,9 +74,9 @@ test('real hook commands show cached notices only in enabled workspaces at start
   }));
   const hook = (target, event, payload) => cli(['hook', '--target', target, '--event', event], payload);
   assert.equal(hook('codex', 'UserPromptSubmit', { cwd: workspace, prompt: 'My task' }).systemMessage, undefined);
-  assert.match(hook('codex', 'SessionStart', { cwd: workspace }).systemMessage, /0\.10\.0 is available/);
+  assert.ok(hook('codex', 'SessionStart', { cwd: workspace }).systemMessage.includes(`${newer} is available`));
   assert.equal(hook('codex', 'SessionStart', { cwd: workspace }).systemMessage, undefined);
-  assert.match(hook('cursor', 'sessionStart', { workspace_roots: [workspace] }).additional_context, /0\.10\.0 is available/);
+  assert.ok(hook('cursor', 'sessionStart', { workspace_roots: [workspace] }).additional_context.includes(`${newer} is available`));
   assert.deepEqual(cli(['tracking', '--disable', '--cwd', workspace]), { enabled: false, workspace });
   assert.deepEqual(hook('gemini', 'SessionStart', { cwd: workspace }), {});
   assert.deepEqual(cli(['update', '--notifications', 'off']), { notificationsEnabled: false });
@@ -95,8 +96,23 @@ test('native manifests share the release version and point to packaged files', a
   assert.equal(cursor.name, name);
   await access(path.join(packageRoot, codex.source.path, 'plugin.json'));
   await access(path.join(packageRoot, cursor.source, '.cursor-plugin/plugin.json'));
+});
+
+test('the shared native startup hook routes Claude and Gemini without a duplicate Claude startup hook', async t => {
+  const { base, env } = await fixture(t);
+  const read = async file => JSON.parse(await readFile(path.join(packageRoot, file), 'utf8'));
   const { hooks } = await read('hooks/hooks.json');
-  assert.deepEqual(Object.keys(hooks), ['SessionStart', 'BeforeAgent']);
-  assert.ok(Object.values(hooks).every(groups => groups[0].hooks[0].command.includes('${extensionPath}/bin/nail.mjs')));
-  await access(path.join(packageRoot, 'bin/nail.mjs'));
+  assert.deepEqual(Object.keys(hooks), ['SessionStart']);
+  const claude = await read('.claude-plugin/plugin.json');
+  assert.deepEqual(Object.keys((await read(claude.hooks)).hooks), ['UserPromptSubmit']);
+  const { command } = hooks.SessionStart[0].hooks[0];
+  const receipts = path.join(base, 'hook-receipts.jsonl');
+  const hookEnv = { ...env, CLAUDE_PLUGIN_ROOT: packageRoot, NAIL_HOOK_RECEIPTS: receipts };
+  const run = cmd => JSON.parse(execSync(cmd, {
+    env: hookEnv, input: JSON.stringify({ cwd: base }), encoding: 'utf8',
+  }));
+  assert.ok(run(command).hookSpecificOutput.additionalContext.includes('is active'));
+  assert.ok(run(command.replace('${extensionPath}', packageRoot)).hookSpecificOutput.additionalContext.includes('is active'));
+  const targets = (await readFile(receipts, 'utf8')).trim().split('\n').map(line => JSON.parse(line).target);
+  assert.deepEqual(targets, ['claude', 'gemini']);
 });

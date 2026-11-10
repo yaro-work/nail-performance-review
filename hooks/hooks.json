@@ -1,6 +1,14 @@
 {
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "name": "nail-performance-review-SessionStart", "type": "command", "command": "node \"${extensionPath}/bin/nail.mjs\" hook --target gemini --event SessionStart", "timeout": 5000 }] }],
-    "BeforeAgent": [{ "hooks": [{ "name": "nail-performance-review-BeforeAgent", "type": "command", "command": "node \"${extensionPath}/bin/nail.mjs\" hook --target gemini --event BeforeAgent", "timeout": 5000 }] }]
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --input-type=commonjs -e \"const p = require('node:path'); const extension = process.argv[1] || ''; const root = p.isAbsolute(extension) ? extension : process.env.CLAUDE_PLUGIN_ROOT; if (root) import(require('node:url').pathToFileURL(p.join(root, 'hooks/session-start.mjs')).href);\" \"${extensionPath}\""
+          }
+        ]
+      }
+    ]
   }
 }
