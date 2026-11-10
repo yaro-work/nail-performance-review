@@ -2,6 +2,8 @@
 
 Remember your achievements when the end-of-year review comes around.
 
+[Install it](#install-it) or follow the [AI setup guide](docs/ai-setup.md). If you're installing from a local Claude Code chat, start with the slash command below.
+
 ## Who is it for?
 
 | For whom | What it helps with |
@@ -62,6 +64,8 @@ Choose **User** scope, open a new chat, and say **“Help me set up my performan
 | Cursor | In **Customize → Plugins**, import `https://github.com/yaro-work/nail-performance-review` from GitHub, then select **Install**. |
 
 Start a new chat after installing. See the [native install guide](docs/install.md#install-through-codex-gemini-or-cursor) for hook trust and switching from the terminal installer.
+
+Cursor can import Claude Code hooks on some setups. If you use both tools, [check for imported hooks](docs/install.md#cursor-and-claude-code-on-the-same-machine) before adding another copy.
 
 **Prefer help from your AI?** Give this README or repository link to your local AI coding tool and paste:
 

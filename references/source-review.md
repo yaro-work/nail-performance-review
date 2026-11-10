@@ -11,7 +11,9 @@ Use the user's requested goals, feedback, or one-on-one documents as source mate
 5. Use `goals --stdin` with `merge: true`. Keep the ID for an ongoing goal when its projects, success measures, or targets change. Update its description with the new details and preserve any context still relevant. Completing one project does not close an ongoing goal. Keep existing evidence and use corrections when the source changes a saved claim. [Record format](record-format.md)
 6. Save concise, dated decisions or feedback in the private manager notes if relevant. Keep the saved manager link out of evidence links that appear in exports. Separate personal contributions from team outcomes. Check for existing evidence before saving an achievement. Use a stable event ID when retrying the same capture.
 
-Report what was read and saved in a short receipt. Leave confidential source details out of work artifacts and ordinary replies.
+Report counts and coverage in a short receipt. Name access gaps and ask only for the next needed action. Leave confidential source details out of work artifacts and ordinary replies.
+
+Prefer reading in the authorized connector. If an export is needed, use an approved temporary location and remove only the copies you created when permitted. Do not invent a precise day from a month or review period. If no supported date is available, flag the item and ask for a date before saving it as dated evidence.
 
 Use prior self-reviews and manager feedback to identify strengths, growth areas, and possible goals. Ask which priorities still apply before saving them as current goals. Keep prior-year achievements in their original review period.
 
