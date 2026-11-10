@@ -69,6 +69,8 @@ Choose **User** scope, open a new chat, and say **“Help me set up my performan
    node bin/nail.mjs init
    ```
 
+   Automatic tracking starts on for all folders. If you prefer to save work only when you ask, run `node bin/nail.mjs init --manual` instead.
+
 2. Run the install command for **each AI tool you use**. These are alternatives; you don’t need all four.
 
    | Your AI tool | Run this command |
@@ -82,10 +84,11 @@ Choose **User** scope, open a new chat, and say **“Help me set up my performan
 
 ### Enable automatic tracking
 
-**Want your AI to save work across projects?** Enable tracking in all folders once. New folders use the same private record automatically. You can also enable just one project.
+**New setups track all folders by default**, including subfolders and new projects. One private record is shared across your local AI tools. You can switch to selected folders or exclude a folder and all its subfolders.
 
-- **In chat:** Say **“Enable automatic tracking in all folders.”** Confirm the record to use.
-- **In a terminal:** From the Nail clone, run the command below. Replace `work` if your record has a different name.
+For manual capture, say **“Switch to manual tracking”** or run `node bin/nail.mjs tracking --manual`. This turns off automatic capture in every folder. You can still ask your AI to save work.
+
+Existing setups keep their tracking choices. To switch an existing record to all folders, say **“Enable automatic tracking in all folders”** or run the command below. Replace `work` if your record has a different name.
 
   ```sh
   node bin/nail.mjs tracking --enable --all --name work

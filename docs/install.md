@@ -14,7 +14,7 @@ See the [verification results](verification.md) for which workflows we ran in re
 
 1. Clone the repository into a folder you will keep.
 2. Initialize a record outside your source repositories.
-3. Check that the command reports the intended absolute record path.
+3. Check that the command reports the intended absolute record path. Automatic tracking defaults to all folders. If you prefer manual capture, add `--manual` to `init`.
 
 <details>
 <summary>Commands</summary>
@@ -89,7 +89,7 @@ Use this option in a local Claude Code session. Install Git and Node.js 22 or la
 
 1. If you installed Claude with the Nail CLI, close Claude Code and remove that adapter from its clone with `node bin/nail.mjs uninstall --target claude`. Your records remain in place. If Cursor reused those Claude skills, reinstall the standalone Cursor adapter with `node bin/nail.mjs install --target cursor`.
 2. In Claude Code, enter the command below and review the marketplace source. Choose **User** scope to keep the installation personal.
-3. Open a new chat and say **“Help me set up my performance record.”** Choose all folders or a specific project when asked about tracking.
+3. Open a new chat and say **“Help me set up my performance record.”** A new setup defaults to all folders. Ask for selected folders if you prefer.
 
 ```text
 /plugin install nail-performance-review --marketplace yaro-work/nail-performance-review
@@ -101,17 +101,19 @@ Claude may still ask before writing to your private record or opening an externa
 
 ## Enable automatic tracking for a workspace
 
-Manual skills work as soon as they are installed. Choose one tracking scope. Open a new chat after completing any pending hook trust steps.
+Your first `init` enables tracking in all folders, including subfolders. Use `init --manual` to start with manual capture or to enable only the folders you choose later. Existing settings stay in place on upgrade. Complete any hook trust steps and open a new chat.
 
 | What you want | Run from the plugin folder |
 |---|---|
 | Track all folders with one default record. | `node bin/nail.mjs tracking --enable --all --name work` |
 | Track one exact folder or give it a different record. | `node bin/nail.mjs tracking --enable --name work --cwd "/absolute/path/to/project"` |
-| Exclude a folder and its subfolders from the all-folder default. | `node bin/nail.mjs tracking --disable --cwd "/absolute/path/to/project"` |
+| Track one folder and all its subfolders. | `node bin/nail.mjs tracking --enable --recursive --name work --cwd "/absolute/path/to/project"` |
+| Exclude a folder and its subfolders. | `node bin/nail.mjs tracking --disable --cwd "/absolute/path/to/project"` |
 | Clear a folder's override or exclusion. | `node bin/nail.mjs tracking --reset --cwd "/absolute/path/to/project"` |
 | Turn off the all-folder default. Individually enabled folders stay on. | `node bin/nail.mjs tracking --disable --all` |
+| Switch to manual capture everywhere and clear previously enabled folders. | `node bin/nail.mjs tracking --manual` |
 
-Each adapter uses the same tracking settings. An explicit folder setting takes priority over the default. A separately enabled subfolder can still track inside an excluded folder. With all-folder tracking on, a Cursor window with several folders can track if all its roots use the same record. A repository’s `.nail.json` selects a record for manual use. Automatic tracking uses the private configuration.
+To switch to selected folders, turn off the all-folder default and enable the folders you want. The closest folder rule wins. A separately enabled subfolder can track inside an excluded folder. With all-folder tracking on, a Cursor window with several folders can track if all its roots use the same record. A repository’s `.nail.json` selects a record for manual use. Automatic tracking uses the private configuration.
 
 To keep only manual skills, install with `--skills-only`. If Cursor already imports your Nail skills from Claude Code, run `install --target cursor --reuse-claude-skills` after installing the Claude adapter from the same checkout. Keep Third-Party Imports enabled in Cursor. If you turn it off or uninstall Claude skills, reinstall Cursor without the reuse flag. The Cursor adapter also installs a local rule that respects startup opt-in and explicit requests.
 

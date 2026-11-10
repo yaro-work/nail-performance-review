@@ -14,8 +14,9 @@ export async function readConfig(options = {}) {
   let config;
   try { config = JSON.parse(text); } catch { throw new Error(`Invalid configuration: ${file}`); }
   if (config?.schema !== 1 || !config.records || Array.isArray(config.records) || typeof config.records !== 'object' ||
-      (config.tracking !== undefined && (!Array.isArray(config.tracking) || config.tracking.some(item => !item || typeof item.workspace !== 'string' || !path.isAbsolute(item.workspace) || typeof item.record !== 'string'))) ||
-      (config.trackingDefault !== undefined && typeof config.trackingDefault !== 'string') ||
+      (config.tracking !== undefined && (!Array.isArray(config.tracking) || config.tracking.some(item => !item || typeof item.workspace !== 'string' || !path.isAbsolute(item.workspace) || typeof item.record !== 'string' ||
+        (item.recursive !== undefined && typeof item.recursive !== 'boolean')))) ||
+      (config.trackingDefault != null && typeof config.trackingDefault !== 'string') ||
       (config.trackingExclusions !== undefined && (!Array.isArray(config.trackingExclusions) ||
         config.trackingExclusions.some(folder => typeof folder !== 'string' || !path.isAbsolute(folder))))) throw new Error(`Invalid configuration: ${file}`);
   return config;
@@ -33,8 +34,13 @@ function recordRoot(config, record) {
   return typeof root === 'string' && path.isAbsolute(root) ? root : undefined;
 }
 
+function containsFolder(parent, workspace) {
+  const relative = path.relative(parent, workspace);
+  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
 export async function setTracking(options) {
-  const workspace = options.all ? undefined : await workspacePath(options.cwd || process.cwd());
+  const workspace = options.all || options.manual ? undefined : await workspacePath(options.cwd || process.cwd());
   const file = configPath(options);
   return withLock(path.dirname(file), async () => {
     const config = await readConfig(options);
@@ -43,18 +49,21 @@ export async function setTracking(options) {
       record = slug(options.name || config.trackingDefault || config.default, 'record name');
       if (!recordRoot(config, record)) throw new Error('Choose a registered record with --name.');
     }
-    if (options.all) {
-      if (record) config.trackingDefault = record;
-      else delete config.trackingDefault;
+    if (options.manual) {
+      config.trackingDefault = null;
+      config.tracking = [];
+    } else if (options.all) {
+      config.trackingDefault = record ?? null;
     } else {
       config.tracking = (config.tracking || []).filter(item => path.relative(item.workspace, workspace) !== '');
-      if (record) config.tracking.push({ workspace, record });
-      else {
+      if (record) config.tracking.push({ workspace, record, ...(options.recursive ? { recursive: true } : {}) });
+      if (!record || options.recursive) {
         config.trackingExclusions = (config.trackingExclusions || []).filter(folder => path.relative(folder, workspace) !== '');
-        if (!options.reset) config.trackingExclusions.push(workspace);
+        if (!record && !options.reset) config.trackingExclusions.push(workspace);
       }
     }
     await atomicWrite(file, `${JSON.stringify(config, null, 2)}\n`);
+    if (options.manual) return { mode: 'manual', enabled: false };
     if (options.reset) return { workspace, reset: true };
     return options.all ? { scope: 'all', enabled: Boolean(record), record } : { enabled: Boolean(record), workspace };
   });
@@ -71,11 +80,17 @@ export async function trackingStatus(options = {}) {
     const root = recordRoot(config, local.record);
     return root ? { workspace, enabled: true, record: local.record, root } : { workspace, enabled: false };
   }
-  const excluded = config.trackingExclusions?.some(folder => {
-    const relative = path.relative(folder, workspace);
-    return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
-  });
-  return defaultRoot && !excluded
+  const rules = [
+    ...(config.trackingExclusions || []).map(folder => ({ workspace: folder })),
+    ...(config.tracking || []).filter(item => item.recursive),
+  ];
+  const closest = rules.filter(rule => containsFolder(rule.workspace, workspace))
+    .sort((a, b) => b.workspace.length - a.workspace.length)[0];
+  if (closest) {
+    const root = recordRoot(config, closest.record);
+    return root ? { workspace, enabled: true, record: closest.record, root, scope: 'recursive' } : { workspace, enabled: false };
+  }
+  return defaultRoot
     ? { workspace, enabled: true, record: defaultRecord, root: defaultRoot, scope: 'all' }
     : { workspace, enabled: false };
 }
@@ -90,6 +105,9 @@ export async function registerRoot(root, options = {}) {
     const config = await readConfig(options);
     if (config.records[name] && config.records[name] !== root) throw new Error(`Record ${name} already points elsewhere. Choose a different --name.`);
     if (Object.values(config.records).includes(root) && config.records[name] !== root) throw new Error('This directory already has another record name.');
+    if (!Object.keys(config.records).length && !Object.hasOwn(config, 'trackingDefault')) {
+      config.trackingDefault = options.manual ? null : name;
+    }
     config.records[name] = root;
     config.default ||= name;
     await atomicWrite(file, `${JSON.stringify(config, null, 2)}\n`);

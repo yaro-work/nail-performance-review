@@ -22,7 +22,7 @@ async function setup(t) {
   const workspace = path.join(directory, 'workspace');
   const other = path.join(directory, 'other');
   await Promise.all([mkdir(workspace), mkdir(other)]);
-  await initRecord({ home, root });
+  await initRecord({ home, root, manual: true });
   const env = { ...process.env, NAIL_HOME: home, NAIL_CONFIG: path.join(home, 'nail/config.json') };
   const cli = (args, input) => JSON.parse(execFileSync(process.execPath, ['bin/nail.mjs', ...args], {
     input: JSON.stringify(input), encoding: 'utf8', env, stdio: ['pipe', 'pipe', 'pipe'],

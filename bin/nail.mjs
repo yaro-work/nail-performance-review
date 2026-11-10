@@ -16,7 +16,7 @@ import { runHook } from '../src/hooks.mjs';
 import { pullAndRefresh } from '../src/update.mjs';
 import { claimManagerRefresh, completeManagerRefresh, configureManagerSource, pauseManagerRefresh, readManagerSource } from '../src/manager-source.mjs';
 
-const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable|--disable|--reset|--status [--all|--cwd FOLDER]  Control automatic tracking\n  inbox [--period YYYY]         List achievements awaiting review\n  triage --id ID --action include|exclude\n  manager-source                Check manager document setup and refresh status\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--pull|--dry-run]      Refresh all terminal-managed adapters\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
+const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable|--disable|--reset|--status [--all|--cwd FOLDER]  Control automatic tracking\n    Add --recursive to enable a folder and its descendants. Use tracking --manual to turn off automatic capture.\n  inbox [--period YYYY]         List achievements awaiting review\n  triage --id ID --action include|exclude\n  manager-source                Check manager document setup and refresh status\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--pull|--dry-run]      Refresh all terminal-managed adapters\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --manual, --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
 
 async function inputJSON() {
   let text = '';
@@ -39,7 +39,7 @@ async function main() {
     allowPositionals: true,
     options: Object.fromEntries([
       ...['root', 'name', 'cwd', 'role', 'timezone', 'level', 'start', 'end', 'period', 'project', 'session', 'reason', 'action', 'note', 'days', 'target', 'event', 'output', 'input', 'id'].map(key => [key, { type: 'string' }]),
-      ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'reset', 'status', 'all', 'pull', 'claim', 'checked', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
+      ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'reset', 'status', 'all', 'recursive', 'manual', 'pull', 'claim', 'checked', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
     ]),
   });
   const [command, ...extra] = positionals;
@@ -47,6 +47,8 @@ async function main() {
   if (values.version) return console.log('0.1.0');
   if (!command || values.help) return console.log(help);
   const options = { ...values, dryRun: values['dry-run'] || false, packageRoot: path.dirname(path.dirname(fileURLToPath(import.meta.url))) };
+  if (options.manual && command !== 'init' && command !== 'tracking') throw new Error('--manual is only used by init or tracking.');
+  if (options.recursive && (command !== 'tracking' || !options.enable || options.all)) throw new Error('--recursive is only used to enable a selected folder.');
   if (options.all && command !== 'tracking') throw new Error('--all is only used by tracking.');
   if (options.reset && command !== 'tracking') throw new Error('--reset is only used by tracking.');
   if (options.pull && command !== 'update') throw new Error('--pull is only used by update.');
@@ -69,9 +71,9 @@ async function main() {
       result.binding = binding;
     }
   } else if (command === 'tracking') {
-    if ([options.enable, options.disable, options.reset, options.status].filter(Boolean).length !== 1 || options.root ||
-        (!options.enable && options.name) || (options.all && (options.cwd || options.reset))) {
-      throw new Error('Use tracking --enable [--name RECORD], --disable, --reset, or --status. Choose --all or --cwd FOLDER. Reset applies only to a folder.');
+    if ([options.enable, options.disable, options.reset, options.status, options.manual].filter(Boolean).length !== 1 || options.root ||
+        (!options.enable && options.name) || (options.all && (options.cwd || options.reset)) || (options.manual && (options.cwd || options.all))) {
+      throw new Error('Use tracking --enable, --disable, --reset, or --status with a folder or --all where applicable. Use tracking --manual on its own.');
     }
     if (options.status) {
       const { root, ...status } = await trackingStatus(options);

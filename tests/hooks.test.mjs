@@ -14,7 +14,7 @@ async function setup(t) {
   const dir = await mkdtemp(path.join(base, 'hooks-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const options = { root: path.join(dir, 'performance'), home: path.join(dir, 'home'), name: 'work', role: 'Engineer', timezone: 'UTC', start: '2026-01-01', end: '2026-12-31' };
-  await initRecord(options);
+  await initRecord({ ...options, manual: true });
   const workspace = path.join(dir, 'workspace');
   await mkdir(workspace);
   return { ...options, workspace };
@@ -137,6 +137,48 @@ test('one all-folder choice reaches new folders across hosts and honors exclusio
   call('tracking', '--reset', '--cwd', privateFolder);
   assert.equal(status(child).record, 'work');
   assert.ok((await cursor()).additional_context);
+});
+
+test('new records track nested folders by default and selected roots can cover a subtree', async t => {
+  const { workspace, home } = await setup(t);
+  const freshHome = path.join(home, 'fresh');
+  const root = path.join(freshHome, 'performance');
+  const cli = path.resolve('bin/nail.mjs');
+  const env = { ...process.env, NAIL_HOME: freshHome, NAIL_CONFIG: path.join(freshHome, 'nail/config.json') };
+  const call = (...args) => JSON.parse(execFileSync(process.execPath, [cli, ...args], { encoding: 'utf8', env }));
+  const status = folder => call('tracking', '--status', '--cwd', folder);
+  const selected = path.join(workspace, 'project');
+  const nested = path.join(selected, 'src', 'nested');
+  const excluded = path.join(selected, 'private');
+  const hidden = path.join(excluded, 'nested');
+  const outside = path.join(workspace, 'project-copy');
+  await Promise.all([mkdir(nested, { recursive: true }), mkdir(hidden, { recursive: true }), mkdir(outside)]);
+  call('init', '--root', root);
+  assert.equal(status(nested).scope, 'all');
+  call('tracking', '--disable', '--all');
+  call('init', '--root', root);
+  assert.equal(status(nested).enabled, false);
+  call('tracking', '--enable', '--recursive', '--cwd', selected);
+  assert.equal(status(nested).scope, 'recursive');
+  assert.equal(status(outside).enabled, false);
+  call('tracking', '--disable', '--cwd', excluded);
+  assert.equal(status(hidden).enabled, false);
+  call('tracking', '--enable', '--recursive', '--cwd', excluded);
+  assert.equal(status(hidden).enabled, true);
+  call('tracking', '--disable', '--all');
+  assert.equal(status(hidden).enabled, true);
+  call('tracking', '--manual');
+  assert.equal(status(hidden).enabled, false);
+  call('init', '--root', root);
+  assert.equal(status(nested).enabled, false);
+  call('tracking', '--enable', '--all');
+  assert.equal(status(outside).enabled, true);
+  assert.equal(status(hidden).scope, 'all');
+  const legacy = JSON.parse(await readFile(env.NAIL_CONFIG, 'utf8'));
+  delete legacy.trackingDefault;
+  await writeFile(env.NAIL_CONFIG, JSON.stringify(legacy));
+  call('init', '--root', root);
+  assert.equal(status(outside).enabled, false);
 });
 
 test('missing or broken configuration leaves user work running', async (t) => {
