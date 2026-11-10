@@ -100,9 +100,9 @@ Try it with real work. A quick fix, a useful diagnosis, or work you’ve started
 
 ### Use your goals and one-on-one notes
 
-Share a goals document or manager notes with your AI and say **“Use this whole document to fill in my goals and achievements for this review period.”** Ask which sections it read if access was incomplete.
+Share a goals document or 1:1 progress notes and say **“Use this whole document to fill in my goals and achievements for this review period.”** Last year’s self-review and your manager’s review or guidance can help identify what to focus on now. Share only material you’re allowed to use with your AI tool.
 
-For a saved manager document link, you can choose weekly or three-week checks. When you next open the selected workspace after a check is due, Nail asks your AI to check the document. Your AI needs access and asks before changing your record. [Set up document checks](docs/install.md#check-a-manager-document-for-updates)
+Prefer Google Docs or other links your AI can open. Saved manager 1:1s are checked weekly by default. Other tracked documents default to every 30 days. You can choose a different interval or a one-time review. Checks run when you open the selected workspace after they’re due. [Set up document checks](docs/install.md#check-a-manager-document-for-updates)
 
 ### Update it
 

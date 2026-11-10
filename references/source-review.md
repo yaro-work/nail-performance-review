@@ -13,16 +13,24 @@ Use the user's requested goals, feedback, or one-on-one documents as source mate
 
 Report what was read and saved in a short receipt. Leave confidential source details out of work artifacts and ordinary replies.
 
-## Save a manager document for later
+Use prior self-reviews and manager feedback to identify strengths, growth areas, and possible goals. Ask which priorities still apply before saving them as current goals. Keep prior-year achievements in their original review period.
 
-Ask before storing a private link. Ask separately whether the user wants manual checks, a weekly check, or a check every three weeks. If they choose recurring checks, confirm one workspace already enabled for the selected performance record. Explain that a check can run when they next open that workspace after it is due, using the AI tool's existing document access.
+## Set up recurring checks
 
-Send `{"url":"HTTPS_DOCUMENT_URL","intervalDays":7}` to `manager-source --stdin --root RECORD_PATH --cwd WORKSPACE_PATH`. Use `21` for three weeks and `0` for manual checks. Include `"reviewed":true` only after reviewing the whole source. Include `"revision":"CONNECTOR_REVISION"` if the connector provides a revision for that reviewed version. When the user asks to pause, run `manager-source --disable --root RECORD_PATH`.
+Use links shared for Nail setup or explicitly for tracking. Prefer Google Docs or another document service the AI can open with its existing access. For uploaded files, historical reviews, or links shared for one-time review, review the supplied material once. Use a separate authorization step if the connector requires it.
+
+After the record exists, use weekly checks for recurring manager 1:1s and every 30 days for other tracked links. Honor any interval or one-time preference already given. Use the current enabled workspace if the user chose it or shared the link there for setup. If it is unclear, ask which enabled workspace to use. For manual tracking, offer a one-time review or ask the user to choose an enabled workspace.
+
+Keep the receipt short: “I’ll check your 1:1 notes weekly when you open this workspace. Say ‘one-time only’ to stop recurring checks, or tell me a different interval.” Always include the last sentence, even when registering multiple links. If access or setup fails, say what is missing.
+
+Send `{"url":"HTTPS_DOCUMENT_URL","kind":"one-on-one","label":"Manager 1:1"}` to `manager-source --stdin --root RECORD_PATH --cwd WORKSPACE_PATH`. Use `kind: document` for other links. Set `intervalDays` only to override the default. Use `0` for a saved link that is checked on request. Include `"reviewed":true` only after reviewing the whole source. Include its verified revision if the connector supplies one.
+
+Use `manager-source --root RECORD_PATH` to list source IDs and schedules. To change an interval, send `{"id":"SOURCE_ID","intervalDays":14}` to `manager-source --stdin --root RECORD_PATH`. When the user asks to stop recurring checks, run `manager-source --disable --id SOURCE_ID --root RECORD_PATH`. Omit the ID only when the user asks to stop checks for every saved link.
 
 ## Check for updates
 
-1. For a scheduled check, run `manager-source --claim --tracking --cwd WORKSPACE_PATH` in the enabled workspace. If it returns `due: false`, carry on with the user's task. For an explicit request to check now, use `manager-source --claim --root RECORD_PATH`. If it reports an active check, continue it in the original chat with its existing check ID.
+1. For a scheduled check, run `manager-source --claim --tracking --cwd WORKSPACE_PATH` in the enabled workspace. If it returns `due: false`, carry on with the user’s task. To check one document on request, use `manager-source --claim --id SOURCE_ID --root RECORD_PATH`. If it reports an active check, continue it in the original chat.
 2. Open the returned private link with the user's approved document connector. If access fails, stop the check. For a scheduled check, keep the user's main task moving. Report the access problem if they ask about the check.
 3. If the connector proves the revision is unchanged, run the completion command in step 5 and skip the update message. If it provides reliable changes since the saved revision, read all changed sections, including edits to older entries. If neither is available, read the whole source in batches. A date filter alone can miss edits.
-4. Compare relevant changes with existing goals and evidence. Briefly show proposed additions or revisions. Ask before changing goals, targets, or achievements from a scheduled check. Keep ongoing goal IDs and use corrections for revised evidence.
-5. After reviewing the full source or a verified change set, finish the check once relevant changes have been applied or declined. Send `{"checkId":"RETURNED_ID","revision":"CONNECTOR_REVISION"}` to `manager-source --checked --stdin --root RECORD_PATH`. Omit `revision` if unavailable. Leave the check incomplete if access was partial or the user deferred a proposed update.
+4. Compare changes with the existing record. Save documented changes to agreed goals in the goal list and relevant feedback in manager notes. Create achievement evidence only for dated work already done or started. If the only change is agreement on a goal, target, or future plan, do not call `record` or create a candidate. Preserve credit and existing goal IDs. Ask before applying conflicts, promoting proposals to goals, or removing anything. Give a brief summary only if something changed.
+5. After reviewing the full source or a verified change set, finish once relevant changes are saved or declined. Send `{"checkId":"RETURNED_ID","revision":"CONNECTOR_REVISION"}` to `manager-source --checked --stdin --root RECORD_PATH`. Omit `revision` if unavailable. Leave the check incomplete if access was partial or the user deferred a decision. If more checks are due and time allows, claim the next source.

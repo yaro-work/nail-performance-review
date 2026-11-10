@@ -25,4 +25,4 @@ If a required program is missing, give one official download link and wait. For 
 
 Do not narrate prerequisites, file writes, or verification. If your host requires an opening update, say only “Checking setup.” Use no further progress messages during these short steps.
 
-Use the [setup skill](../skills/nail-performance-review-setup/SKILL.md) after installation. At onboarding, say that automatic tracking is on for all folders by default and that the user can say “Switch to manual tracking.” For an existing installation, use the [update steps](../README.md#update-it).
+Use the [setup skill](../skills/nail-performance-review-setup/SKILL.md) after installation. Mention the all-folder default and manual tracking option. When asking for documents, suggest Google Docs or other links the AI can open. For a live link, state its check interval and how to choose a one-time review. For an existing installation, use the [update steps](../README.md#update-it).

@@ -6,6 +6,7 @@ import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { initRecord, updateDocument, saveEvidence, listEvidence, readPriorityDecisions, readDocument } from '../src/records.mjs';
 import { setTracking, trackingRoot, trackingStatus } from '../src/config.mjs';
+import { configureManagerSource, managerSourceStatus, readManagerSources } from '../src/manager-source.mjs';
 import { install } from '../src/install.mjs';
 import { reviewPacket } from '../src/reviews.mjs';
 import { scenarios } from './assistant-scenarios.mjs';
@@ -59,10 +60,28 @@ export function grade(expected, observed) {
   if (expected.quietLast) check('routine follow-up stays quiet', !/\b(achievement|performance|priorit|promotion)\b/i.test(observed.lastMessage));
   if (expected.setupTracking) {
     const turns = observed.setupTurns || [];
+    const opening = turns[0]?.assistant || '';
+    check('setup suggests optional progress notes and prior reviews', /\boptional\b|if you have/i.test(opening) &&
+      /\b1\s*[:\-–]\s*1s?\b|one-on-one/i.test(opening) && /self[- ]review/i.test(opening) &&
+      /manager.{0,50}(review|guidance|feedback)|(review|guidance|feedback).{0,50}manager/i.test(opening));
+    check('setup suggests accessible document links', /Google Doc/i.test(opening) && /links?/i.test(opening));
+    check('setup avoids absolute privacy promises', !/completely private|100% private|fully private/i.test(opening));
     check('user goal saved during setup', observed.goals?.some(goal => /safer releases/i.test(goal.title)));
     check('setup explains the all-folder default', /all folders/i.test(turns[1]?.assistant || ''));
     check('setup uses the default and honors the switch to one folder', turns.length === 3 &&
       !turns[0].trackingEnabled && turns[1].allTracking && !turns[2].allTracking && turns[2].trackingEnabled);
+  }
+  if (expected.sourceIntervals) {
+    const opening = observed.sourceTurns?.[0]?.assistant || '';
+    check('linked sources use the expected independent intervals', JSON.stringify(observed.sourceTurns?.[0]?.sourceIntervals) === JSON.stringify(expected.sourceIntervals));
+    check('reply states the cadences and how to opt out or change them', /weekly|every 7 days/i.test(opening) &&
+      /30 days|monthly/i.test(opening) && /one.time|opt out|pause|stop checking/i.test(opening) &&
+      /different interval|change|instead/i.test(opening));
+    check('later schedule changes and opt-out are saved', JSON.stringify(observed.sourceTurns?.at(-1)?.sourceIntervals) === JSON.stringify(expected.changedSourceIntervals));
+  }
+  if (expected.documentRefresh) {
+    check('scheduled source was checked and checkpointed', observed.sources?.some(source => source.lastChecked && source.intervalDays === 7));
+    check('scheduled refresh saved a supported goal change locally', observed.goals?.some(goal => goal.id === 'reliability' && /48 hours/i.test(goal.description)));
   }
   if (expected.outcomes) check('eligible outcomes reminder used', observed.commandResults.some(c => c.exitCode === 0 && /\bnudge\b/.test(c.command) && /outcomes/.test(c.command) && /"shown":\s*true/.test(c.output)));
   if (expected.alignment) check('eligible alignment reminder used', observed.reminders.receipts.some(r => r.key.includes(':alignment:')));
@@ -121,6 +140,7 @@ async function runCase(base, scenario, model, executable) {
     if (!scenario.allFolders && scenario.expected.context !== false) await setTracking({ home, cwd: project, name: 'work', enable: true });
     await updateDocument(root, 'goals', { items: [{ id: 'reliability', title: 'Make releases safer' }] });
     await updateDocument(root, 'project', { id: 'migration', title: 'Service migration', goals: ['reliability'] });
+    if (scenario.documentSource) await configureManagerSource(root, scenario.documentSource, { workspace: project });
   }
   if (scenario.seed) await saveEvidence(root, { eventId: 'migration-rollout', date: '2026-05-10', project: 'migration', goals: ['reliability'], source: 'codex', state: 'delivered', basis: 'reported', contribution: 'Designed the migration rollout plan.', outcome: 'The team shipped the migration.', collaborators: ['Avery'], links: ['https://example.com/pr/123'], metrics: [] });
   await install('codex', { home, root, packageRoot });
@@ -150,7 +170,9 @@ async function runCase(base, scenario, model, executable) {
     const records = await listEvidence(root, { includeSuperseded: true }).catch(() => []);
     const trackingEnabled = scenario.expected.setupTracking && await trackingRoot(project, { home }) === root;
     const allTracking = scenario.expected.setupTracking && (await trackingStatus({ home, all: true })).enabled;
-    turns.push({ user: prompt, assistant, code, records, commands: calls, trackingEnabled, allTracking, completed: code === 0 && events.some(e => e.type === 'turn.completed') });
+    const sourceIntervals = scenario.expected.sourceIntervals
+      ? (await readManagerSources(root)).map(source => source.intervalDays).sort((a, b) => a - b) : undefined;
+    turns.push({ user: prompt, assistant, code, records, commands: calls, trackingEnabled, allTracking, sourceIntervals, completed: code === 0 && events.some(e => e.type === 'turn.completed') });
     if (!turns.at(-1).completed || !session) break;
   }
   let active = [], history = [], packet = '', recordError;
@@ -161,9 +183,11 @@ async function runCase(base, scenario, model, executable) {
   const observed = { session, sandbox: runtime.sandbox, injectedContext: runtime.context, active, history, packet, recordError, hooks, messages: messages.join('\n\n'), commandResults, completed: turns.length === scenario.turns.length && turns.every(t => t.completed), before, after: await snapshot(root), file: scenario.expected.file ? await read(path.join(project, scenario.expected.file)) : '' };
   observed.priorityDecisions = await readPriorityDecisions(root);
   observed.goals = await readDocument(root, 'goals').then(doc => doc.items, () => []);
+  observed.sources = await readManagerSources(root).then(sources => sources.map(managerSourceStatus), () => []);
   observed.reminders = JSON.parse(await read(path.join(root, '.nail-reminders.json')) || '{"receipts":[]}');
   observed.lastMessage = messages.at(-1) || '';
   if (scenario.expected.setupTracking) observed.setupTurns = turns.map(({ assistant, trackingEnabled, allTracking }) => ({ assistant, trackingEnabled, allTracking }));
+  if (scenario.expected.sourceIntervals) observed.sourceTurns = turns.map(({ assistant, sourceIntervals }) => ({ assistant, sourceIntervals }));
   const result = { id: scenario.id, turns, ...grade({ ...scenario.expected, readOnly: Boolean(scenario.readOnly) }, observed), observed };
   await json(path.join(directory, 'result.json'), result);
   console.log(`${scenario.id}: ${result.status}; ${result.checks.filter(c => !c.pass).map(c => c.name).join(', ')}`);
@@ -190,7 +214,7 @@ async function main() {
   const base = path.join(packageRoot, '.scratch', 'conversations', `${Date.now()}-${randomUUID().slice(0, 8)}`);
   await fs.mkdir(base, { recursive: true });
   const model = process.env.NAIL_MODEL || 'gpt-6.1-sol';
-  const sourceFiles = [...(await fs.readdir(path.join(packageRoot, 'src'))).filter(f => f.endsWith('.mjs')).map(f => `src/${f}`), 'bin/nail.mjs', 'scripts/assistant-evaluation.mjs', 'scripts/assistant-scenarios.mjs', 'docs/support-standard.md', ...['nail-performance-review-setup', 'nail-performance-review-track', 'nail-performance-review-review', 'nail-performance-review-report'].map(s => `skills/${s}/SKILL.md`)];
+  const sourceFiles = [...(await fs.readdir(path.join(packageRoot, 'src'))).filter(f => f.endsWith('.mjs')).map(f => `src/${f}`), 'bin/nail.mjs', 'scripts/assistant-evaluation.mjs', 'scripts/assistant-scenarios.mjs', 'docs/support-standard.md', 'references/source-review.md', ...['nail-performance-review-setup', 'nail-performance-review-track', 'nail-performance-review-review', 'nail-performance-review-report'].map(s => `skills/${s}/SKILL.md`)];
   const manifest = { started: new Date().toISOString(), model, codex: execFileSync(executable, ['--version'], { encoding: 'utf8' }).trim(), commit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: packageRoot, encoding: 'utf8' }).trim(), node: process.version, platform: process.platform, trust: 'one-invocation bypass after source review; does not verify persisted trust UI', reviewedHookSources: sources, sources: Object.fromEntries(await Promise.all(sourceFiles.map(async f => [f, hash(await fs.readFile(path.join(packageRoot, f)))]))) };
   await json(path.join(base, 'manifest.json'), manifest);
   await write(path.join(base, 'support-standard.md'), await read(path.join(packageRoot, 'docs/support-standard.md')));

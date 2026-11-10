@@ -177,14 +177,16 @@ The import command accepts nail-performance-review's structured export format. A
 
 ## Check a manager document for updates
 
-1. Share the document with your AI. Ask it to review the whole document and fill in agreed goals and supported achievements.
-2. If you want to revisit a private link, ask your AI to save it in your performance record.
-3. Choose manual checks, weekly checks, or checks every three weeks. For recurring checks, confirm an enabled workspace.
-4. After a check is due, open a new chat in that workspace. Nail reminds your AI to check the link with its existing access. Your AI asks before saving proposed changes.
+1. Share a Google Doc or another link your AI can open. You can also share a file for a one-time review.
+2. For a live document, confirm an enabled workspace. Manager 1:1 notes default to weekly checks. Other tracked links default to every 30 days.
+3. Say **“One-time only,” “Check this every 14 days,”** or **“Stop checking this document”** to choose another schedule or opt out.
+4. When a check is due, open a new chat in that workspace. The AI uses its existing document access and saves clear, supported changes locally. It asks about ambiguous changes.
 
 The first review covers all accessible sections. If the AI cannot read the whole document, it tells you which parts it missed. Later checks use revision information when available or review the document again. Recurring checks need an active AI chat. To prevent new checks, pause them or disable tracking for the chosen folder.
 
-Say **“Check my manager document now”** or **“Pause manager document checks.”** To pause from a terminal in the plugin folder, run `node bin/nail.mjs manager-source --disable --name work`.
+To configure checks from a terminal, pass JSON on stdin to `node bin/nail.mjs manager-source --stdin --name work --cwd "/absolute/path/to/project"`. Use `{"url":"https://example.com/notes","kind":"one-on-one"}` for weekly checks, or add `"intervalDays":0` for manual checks. A kind of `document` defaults to 30 days.
+
+Run `node bin/nail.mjs manager-source --name work` to list source IDs. To change a schedule, pass `{"id":"SOURCE_ID","intervalDays":14}` to the same stdin command. To pause one link, run `node bin/nail.mjs manager-source --disable --id SOURCE_ID --name work`. Omit `--id` to pause all links.
 
 ## Upgrade or uninstall
 
