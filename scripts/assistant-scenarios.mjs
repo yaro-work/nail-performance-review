@@ -36,6 +36,12 @@ export const scenarios = [
     expected: { active: 1, history: 1, contribution: 'review', collaborator: 'Avery', metrics: 0, file: 'release-notes.md', fileIncludes: 'Avery' },
   },
   {
+    id: 'unapproved-workspace',
+    turns: ['Update release-notes.md about the migration we delivered. I reviewed the rollout plan with Avery. The team shipped the migration. Supporting PR: https://example.com/pr/123.'],
+    files: { 'release-notes.md': '# Migration\n\nRelease notes pending.\n' },
+    expected: { context: false, active: 0, history: 0, quiet: true, unchanged: true, file: 'release-notes.md', fileIncludes: 'Avery' },
+  },
+  {
     id: 'corrected-credit', seed: true,
     turns: [
       'Correct my migration achievement: I reviewed Avery\'s rollout plan, rather than designing it. Avery designed the plan and built the service. We shipped together. Keep the PR reference and leave reliability improvement unmeasured.',

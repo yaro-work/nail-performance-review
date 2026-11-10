@@ -21,14 +21,17 @@ function runner(env) {
 const json = text => JSON.parse(text);
 
 test('scenario: ABCD milestones connect migration evidence to a Staff growth goal', async t => {
-  const { root, env } = await fixture(t);
+  const { base, env } = await fixture(t);
   const run = runner(env);
   await run(['profile', '--stdin'], { role: 'Software engineer', level: 'Senior', promotion: true, targetLevel: 'Staff' });
   await run(['goals', '--stdin'], { items: [{ id: 'migration', title: 'Migrate Google Cloud to AWS' }, { id: 'growth', title: 'Develop Staff-level technical influence' }] });
   await run(['project', '--stdin'], { id: 'abcd', title: 'Redesigning infrastructure of app ABCD', goals: ['migration', 'growth'] });
-  const startup = json(await run(['hook', '--target', 'codex', '--event', 'SessionStart'], { cwd: root }));
-  assert.ok(startup.hookSpecificOutput.additionalContext.includes('Migrate Google Cloud to AWS'));
-  assert.ok(startup.hookSpecificOutput.additionalContext.includes('Staff'));
+  await run(['tracking', '--enable', '--cwd', base]);
+  const startup = json(await run(['hook', '--target', 'codex', '--event', 'SessionStart'], { cwd: base }));
+  assert.match(startup.hookSpecificOutput.additionalContext, /context --tracking/);
+  const context = await run(['context', '--tracking', '--cwd', base, '--project', 'abcd']);
+  assert.ok(context.includes('Migrate Google Cloud to AWS'));
+  assert.ok(context.includes('Staff'));
   const draft = json(await run(['record', '--stdin'], evidence({ date: '2026-02-07', project: 'abcd', goals: ['migration'], state: 'in-progress', contribution: 'Implemented the first staged rollout with Avery.', outcome: 'The first service runs successfully in AWS.', collaborators: ['Avery'] })));
   assert.equal(draft.state, 'in-progress');
   const reminder = json(await run(['nudge', '--project', 'abcd', '--session', 'delivery-check-in', '--reason', 'outcomes']));
@@ -63,16 +66,20 @@ test('scenario: a designer records work and prepares a review and HTML', async t
   assert.ok((await fs.readFile(path.join(root, 'expectations.md'), 'utf8')).includes('Provisional'));
 });
 
-test('scenario: four adapters share a bound record and another employer stays separate', async t => {
+test('scenario: four adapters share an opted-in record and another employer stays separate', async t => {
   const { root, env, base } = await fixture(t);
   const run = runner(env);
   const projects = [path.join(base, 'project-a'), path.join(base, 'project-b')];
-  for (const cwd of projects) { await fs.mkdir(cwd); await run(['init', '--root', root, '--name', 'work', '--cwd', cwd, '--bind']); }
+  for (const cwd of projects) { await fs.mkdir(cwd); await run(['tracking', '--enable', '--name', 'work', '--cwd', cwd]); }
   await run(['record', '--stdin'], evidence({ contribution: 'A contribution only in the work record.' }));
   for (const [target, event] of [['codex', 'SessionStart'], ['claude', 'SessionStart'], ['cursor', 'sessionStart'], ['gemini', 'SessionStart']]) {
-    const payload = json(await run(['hook', '--target', target, '--event', event], { cwd: projects[target === 'cursor' ? 1 : 0] }));
+    const cwd = projects[target === 'cursor' ? 1 : 0];
+    const payload = json(await run(['hook', '--target', target, '--event', event], target === 'cursor' ? { workspace_roots: [cwd] } : { cwd }));
     const context = target === 'cursor' ? payload.additional_context : payload.hookSpecificOutput.additionalContext;
-    assert.ok(context.includes(root)); assert.ok(context.includes('A contribution only in the work record.'));
+    assert.match(context, /context --tracking/);
+    assert.ok(!context.includes(root));
+    const selected = await run(['context', '--tracking', '--cwd', cwd, '--project', 'migration']);
+    assert.ok(selected.includes(root)); assert.ok(selected.includes('A contribution only in the work record.'));
   }
   const other = path.join(base, 'other-employer');
   const isolated = path.join(base, 'other-project'); await fs.mkdir(isolated);

@@ -97,7 +97,7 @@ export function decodeEvidence(content, file = 'evidence') {
 }
 export async function readDocument(root, name) {
   slug(name);
-  const file = path.join(root, `${name}.md`);
+  const file = await assertInside(root, path.join(root, `${name}.md`));
   const content = await readOptional(file);
   if (!content) throw new Error(`Missing ${name}.md. Run init first.`);
   const document = parseMarkdown(content, file);
@@ -123,7 +123,7 @@ export async function readDocument(root, name) {
 }
 export async function readPriorityDecisions(root) {
   const result = [];
-  for (const file of await walkMarkdown(path.join(root, 'decisions'))) {
+  for (const file of await walkMarkdown(await assertInside(root, path.join(root, 'decisions')))) {
     const decision = parseMarkdown(await fs.readFile(file, 'utf8'), file);
     if (decision.type !== 'priority-decision' || decision.action !== 'continue' || !/^[a-f0-9]{64}$/.test(decision.goalsFingerprint)) throw new Error(`${file}: invalid priority decision.`);
     slug(decision.project, 'project'); text(decision.body, 'decision note', true);
@@ -202,7 +202,7 @@ export async function updateDocument(root, name, input) {
       await checkGoals(root, goals);
       const profile = await readDocument(root, 'profile');
       const status = input.status || 'in-progress';
-      if (!['in-progress', 'delivered', 'measured', 'paused'].includes(status)) throw new Error('Invalid project status.');
+      if (!['in-progress', 'delivered', 'measured', 'paused'].includes(status)) throw new Error('Invalid project status. Use in-progress, delivered, measured, or paused.');
       file = path.join(root, 'years', today(profile.timezone).slice(0, 4), 'projects', `${input.id}.md`);
       metadata = { schema: 1, type: name, id: input.id, title: input.title, goals, status }; body = '# Project';
     }
@@ -218,7 +218,7 @@ async function checkGoals(root, goals) {
 }
 export async function listEvidence(root, { start, end, includeSuperseded = false } = {}) {
   const result = [];
-  for (const file of await walkMarkdown(path.join(root, 'years'))) {
+  for (const file of await walkMarkdown(await assertInside(root, path.join(root, 'years')))) {
     if (path.basename(path.dirname(file)) === 'evidence') result.push(decodeEvidence(await fs.readFile(file, 'utf8'), file));
   }
   const ids = new Map();

@@ -1,12 +1,12 @@
 # Keep your performance record private
 
-For people deciding what to store in nail-performance-review. Updated November 8, 2026.
+For people deciding what to store in nail-performance-review. Updated November 9, 2026.
 
 nail-performance-review stores notes on your computer. Its CLI does not call AI APIs, send telemetry, or create a remote account.
 
 Your active AI tool can read the notes you authorize it to use. That tool's data policies still apply. Local storage does not make an AI conversation private by itself.
 
-When a configured AI session starts, the plugin supplies saved goals and excerpts of expectations, manager feedback, and recent achievements to that AI tool. Review the performance folder before connecting a tool. Use only information you are authorized to store and share with its provider.
+Automatic tracking is off until you enable it for an exact workspace. Its startup hook sends a short instruction and does not read your performance record. At a milestone, your AI tool can request tracking context for that workspace. That context includes goals and expectations, plus evidence and priority decisions for a named project. Manager notes stay out of tracking context. Manual review and context commands can include more information.
 
 Choose a folder outside source repositories. Keep separate records for employers or contexts that must not share information.
 
@@ -41,4 +41,4 @@ nail-performance-review does not send reviews, post messages, or publish reports
 
 Use your approved backup method for the performance folder. nail-performance-review does not encrypt records or provide cloud synchronization.
 
-Uninstalling an adapter leaves the performance record intact. Delete notes only through a deliberate user action and your normal retention process.
+Uninstalling an adapter leaves the performance record and workspace authorizations intact. Run `tracking --disable` from the workspace to revoke its authorization for all adapters. Delete notes only through a deliberate user action and your normal retention process.

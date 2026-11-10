@@ -43,7 +43,7 @@ The plugin doesn’t require an extra AI subscription. Use it with your current 
   <img src="docs/assets/project-workflow.svg" width="1240" alt="Set migration and growth goals, record an implementation milestone, collect outcomes near completion, and consider growth advice based on your company’s career ladder. The latency numbers are fictional examples.">
 </picture>
 
-*Example: migrate Google Cloud to AWS while growing from Senior toward Staff. Your AI chat uses your saved goals and the work you discuss to spot milestones and useful follow-ups. Measurements come from you or tools you authorize.*
+*Example: migrate Google Cloud to AWS while growing from Senior toward Staff. In a workspace you enable for tracking, your AI chat uses your saved goals and the work you discuss to spot milestones and useful follow-ups. Measurements come from you or tools you authorize.*
 
 ## Install it
 
@@ -73,6 +73,8 @@ The plugin doesn’t require an extra AI subscription. Use it with your current 
 3. Run `node bin/nail.mjs doctor`. Complete your AI tool’s [trust or enablement steps](docs/install.md#connect-an-ai-tool), then start a new chat and say **“Help me set up my performance record.”**
 
 For another notes folder, multiple employers, upgrades, or uninstalling, see the [installation guide](docs/install.md).
+
+Automatic tracking is opt-in per workspace. The startup hook sends a short instruction and leaves your record on disk until your AI chat requests tracking context. See [how to enable it](docs/install.md#enable-automatic-tracking-for-a-workspace) or install with `--skills-only` for manual use.
 
 ## Prepare a review
 

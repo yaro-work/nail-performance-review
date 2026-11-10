@@ -57,3 +57,22 @@ test('default registry follows the documented OS configuration directory without
   assert.equal(JSON.parse(await fs.readFile(expected, 'utf8')).records.default, root);
   assert.equal((await cli(['context'], env)).code, 0);
 });
+
+test('automatic context selects the opted-in record, ignoring repository bindings and private feedback', async t => {
+  const { base, root, env } = await fixture(t);
+  const workspace = path.join(base, 'project');
+  await fs.mkdir(workspace);
+  await fs.writeFile(path.join(workspace, '.nail.json'), '{"schema":1,"record":"other"}');
+  await fs.writeFile(path.join(root, 'manager-notes.md'), 'PRIVATE-FEEDBACK-SENTINEL');
+  assert.equal((await cli(['init', '--name', 'other', '--root', path.join(base, 'other'), '--role', 'OTHER-RECORD-SENTINEL'], env)).code, 0);
+  const args = ['context', '--tracking', '--cwd', workspace];
+  assert.equal((await cli(args, env)).code, 1);
+  assert.equal((await cli(['tracking', '--enable', '--name', 'work', '--cwd', workspace], env)).code, 0);
+  const result = await cli(args, env);
+  assert.equal(result.code, 0, result.stderr);
+  assert.ok(result.stdout.includes(root));
+  assert.doesNotMatch(result.stdout, /PRIVATE-FEEDBACK-SENTINEL|OTHER-RECORD-SENTINEL/);
+  assert.equal((await cli([...args, '--name', 'other'], env)).code, 1);
+  assert.equal((await cli(['tracking', '--disable', '--cwd', workspace], env)).code, 0);
+  assert.equal((await cli(args, env)).code, 1);
+});

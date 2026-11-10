@@ -1,13 +1,16 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { access, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { assertInside, withLock } from './storage.mjs';
 
 const ownRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const skillNames = ['nail-performance-review-setup', 'nail-performance-review-track', 'nail-performance-review-review', 'nail-performance-review-report'];
 const legacySkillNames = ['nail-setup', 'nail-track', 'nail-review', 'nail-report'];
+const cursorRule = '.cursor/rules/nail-performance-review.mdc';
 const targets = {
   codex: { skills: '.agents/skills', config: '.codex/hooks.json', start: 'SessionStart', stop: 'Stop' },
   claude: { skills: '.claude/skills', config: '.claude/settings.json', start: 'SessionStart', stop: 'Stop' },
@@ -26,13 +29,14 @@ async function readOptional(file) {
   catch (error) { if (error.code === 'ENOENT') return null; throw error; }
 }
 
-async function readJson(file) {
-  const content = await readOptional(file);
+function parseJson(content, file) {
   if (content === null) return null;
   const value = JSON.parse(content);
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`Expected JSON object: ${file}`);
   return value;
 }
+
+async function readJson(file) { return parseJson(await readOptional(file), file); }
 
 function locations(target, options) {
   if (!Object.hasOwn(targets, target)) throw new Error(`Unknown installation target: ${target}`);
@@ -42,10 +46,10 @@ function locations(target, options) {
 
 function hookEntry(target, event, cli) {
   const args = [cli, 'hook', '--target', target, '--event', event];
-  const command = [process.execPath, ...args].map((arg) => shellQuote(normalize(arg))).join(' ');
+  const command = ['node', ...args.map((arg) => shellQuote(normalize(arg)))].join(' ');
   const windowsCommand = `node "${normalize(cli)}" hook --target ${target} --event ${event}`;
-  if (target === 'cursor') return { command: process.platform === 'win32' ? `& ${[process.execPath, ...args].map((arg) => powershellQuote(normalize(arg))).join(' ')}` : command, timeout: 5 };
-  if (target === 'claude') return { hooks: [{ type: 'command', command: process.execPath, args, timeout: 5 }] };
+  if (target === 'cursor') return { command: process.platform === 'win32' ? `node ${args.map((arg) => powershellQuote(normalize(arg))).join(' ')}` : command, timeout: 5 };
+  if (target === 'claude') return { hooks: [{ type: 'command', command: 'node', args, timeout: 5 }] };
   const hook = { type: 'command', command: target === 'gemini' && process.platform === 'win32' ? windowsCommand : command, timeout: target === 'gemini' ? 5000 : 5 };
   if (target === 'gemini') hook.name = `nail-performance-review-${event}`;
   if (target === 'codex') hook.command_windows = windowsCommand;
@@ -55,6 +59,7 @@ function hookEntry(target, event, cli) {
 function validateManifest(manifest, target, home) {
   if (!manifest) return;
   const allowed = new Set([...skillNames, ...legacySkillNames].map((name) => path.join(home, targets[target].skills, name, 'SKILL.md')));
+  if (target === 'cursor') allowed.add(path.join(home, cursorRule));
   const configFile = targets[target].config ? path.join(home, targets[target].config) : null;
   if (manifest.version !== 1 || manifest.target !== target || !Array.isArray(manifest.files) || !Array.isArray(manifest.entries) || manifest.configFile !== configFile || manifest.files.some((file) => !allowed.has(file.path))) throw new Error('Invalid Nail installation manifest; no files changed');
 }
@@ -62,59 +67,102 @@ function validateManifest(manifest, target, home) {
 function removeEntries(config, entries) {
   for (const { event, entry } of entries) {
     if (!Array.isArray(config.hooks?.[event])) continue;
-    config.hooks[event] = config.hooks[event].filter((item) => JSON.stringify(item) !== JSON.stringify(entry));
+    config.hooks[event] = config.hooks[event].filter(item => !isDeepStrictEqual(item, entry));
     if (!config.hooks[event].length) delete config.hooks[event];
   }
 }
 
-async function atomicWrite(file, content) {
-  await mkdir(path.dirname(file), { recursive: true });
-  const temporary = `${file}.${randomUUID()}.tmp`;
-  await writeFile(temporary, content, { mode: 0o600, flag: 'wx' });
-  try { await rename(temporary, file); }
-  catch (error) { await unlink(temporary).catch(() => {}); throw error; }
+async function renderTemplate(packageRoot, source) {
+  const template = await readFile(path.join(packageRoot, source), 'utf8');
+  return template.replaceAll('{{NAIL_PACKAGE_ROOT}}', normalize(packageRoot)).replaceAll('{{NAIL_CLI}}', normalize(path.join(packageRoot, 'bin/nail.mjs'))).replaceAll('{{NAIL_ROOT}}', '');
 }
 
-async function applyChanges(changes, manifestFile, manifest) {
+async function hasCurrentClaudeSkills(home, packageRoot) {
+  const manifest = await assertInside(home, path.join(home, '.nail/installations/claude.json'));
+  const claude = await readJson(manifest);
+  validateManifest(claude, 'claude', home);
+  for (const name of skillNames) {
+    const file = await assertInside(home, path.join(home, targets.claude.skills, name, 'SKILL.md'));
+    const content = await readOptional(file);
+    const current = await renderTemplate(packageRoot, path.join('skills', name, 'SKILL.md'));
+    if (content !== current || !claude?.files.some(item => item.path === file && item.sha256 === digest(current))) return false;
+  }
+  return true;
+}
+
+async function writeChange({ path: file, content, before }) {
+  const check = async () => {
+    if (await readOptional(file) !== before) throw new Error(`File changed during installation: ${file}. Close the host and retry.`);
+  };
+  if (content === null) {
+    await check();
+    if (before !== null) await unlink(file);
+    return;
+  }
+  if (content === before) { await check(); return; }
+  await mkdir(path.dirname(file), { recursive: true });
+  const temporary = `${file}.${randomUUID()}.tmp`;
+  const mode = (await stat(file).catch(error => { if (error.code !== 'ENOENT') throw error; }))?.mode;
+  try {
+    await writeFile(temporary, content, { mode: mode ?? 0o600, flag: 'wx' });
+    await check();
+    await rename(temporary, file);
+  } finally { await unlink(temporary).catch(() => {}); }
+}
+
+async function applyChanges(changes) {
   const completed = [];
   try {
     for (const change of changes) {
-      if (change.content === null) await unlink(change.path);
-      else await atomicWrite(change.path, change.content);
+      await writeChange(change);
       completed.push(change);
     }
-    await atomicWrite(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`);
   } catch (error) {
     for (const change of completed.reverse()) {
-      if (change.before === null) await unlink(change.path).catch(() => {});
-      else await atomicWrite(change.path, change.before);
+      await writeChange({ path: change.path, before: change.content, content: change.before }).catch(() => {});
     }
     throw error;
   }
 }
 
-export async function install(target, options = {}) {
+async function installationAction(target, options, action) {
+  const { home, manifest } = locations(target, options);
+  await assertInside(home, manifest);
+  if (options.dryRun) return action(target, options);
+  return withLock(path.dirname(manifest), () => action(target, options));
+}
+
+export function install(target, options = {}) { return installationAction(target, options, installLocked); }
+export function uninstall(target, options = {}) { return installationAction(target, options, uninstallLocked); }
+
+async function installLocked(target, options) {
   const { home, spec, manifest: manifestFile } = locations(target, options);
-  const previous = await readJson(manifestFile);
+  const manifestBefore = await readOptional(manifestFile);
+  const previous = parseJson(manifestBefore, manifestFile);
   validateManifest(previous, target, home);
   const packageRoot = path.resolve(options.packageRoot || ownRoot);
-  const root = options.root ? path.resolve(options.root) : '';
-  if (/[\r\n\0]/.test(packageRoot + root)) throw new Error('Installation paths cannot contain control characters');
+  if (/[\r\n\0]/.test(packageRoot)) throw new Error('Installation paths cannot contain control characters');
   if (process.platform === 'win32' && ['codex', 'gemini'].includes(target) && /[%!$`"]/.test(packageRoot)) throw new Error('This host requires a package path without shell expansion characters');
   const cli = path.join(packageRoot, 'bin', 'nail.mjs');
   const changes = [];
   const files = [];
+  if (options.reuseClaudeSkills && target !== 'cursor') throw new Error('--reuse-claude-skills applies only to Cursor.');
+  if (options.reuseClaudeSkills && !await hasCurrentClaudeSkills(home, packageRoot)) throw new Error('Install current Nail skills for Claude first from this checkout and enable Cursor Third-Party Imports.');
+  const sources = (options.reuseClaudeSkills ? [] : skillNames).map(name => ({
+    source: path.join('skills', name, 'SKILL.md'), destination: path.join(spec.skills, name, 'SKILL.md'),
+  }));
+  if (target === 'cursor' && !options.skillsOnly) sources.push({ source: 'adapters/cursor/nail.mdc', destination: cursorRule });
   for (const file of previous?.files || []) {
-    if (!legacySkillNames.includes(path.basename(path.dirname(file.path)))) continue;
+    if (sources.some(item => path.join(home, item.destination) === file.path)) continue;
+    await assertInside(home, file.path);
     const before = await readOptional(file.path);
     if (before === null) continue;
-    if (digest(before) !== file.sha256) throw new Error(`Preserving an edited legacy skill: ${file.path}. Back up and resolve your edits before upgrading.`);
+    if (digest(before) !== file.sha256) throw new Error(`Preserving an edited ${legacySkillNames.includes(path.basename(path.dirname(file.path))) ? 'legacy skill' : 'installation file'}: ${file.path}. Back up and resolve your edits before upgrading.`);
     changes.push({ path: file.path, content: file.before, before });
   }
-  for (const name of skillNames) {
-    const source = await readFile(path.join(packageRoot, 'skills', name, 'SKILL.md'), 'utf8');
-    const content = source.replaceAll('{{NAIL_PACKAGE_ROOT}}', normalize(packageRoot)).replaceAll('{{NAIL_CLI}}', normalize(cli)).replaceAll('{{NAIL_ROOT}}', normalize(root)) + `\n\n## Local installation\n\nNail CLI: ${normalize(cli)}\nPerformance directory: ${root ? normalize(root) : 'Resolve the selected record with the Nail CLI.'}\n`;
-    const file = path.join(home, spec.skills, name, 'SKILL.md');
+  for (const { source, destination } of sources) {
+    const content = await renderTemplate(packageRoot, source);
+    const file = await assertInside(home, path.join(home, destination));
     const before = await readOptional(file);
     const owned = previous?.files?.find((item) => item.path === file);
     if (before !== null && (!owned || digest(before) !== owned.sha256)) throw new Error(`Preserving an unowned or edited skill: ${file}`);
@@ -127,72 +175,74 @@ export async function install(target, options = {}) {
   let configHadVersion = false;
   let configCreated = false;
   if (spec.config) {
-    configFile = path.join(home, spec.config);
+    configFile = await assertInside(home, path.join(home, spec.config));
     const before = await readOptional(configFile);
-    const config = await readJson(configFile) || {};
+    const config = parseJson(before, configFile) || {};
     configCreated = previous ? previous.configCreated : before === null;
     configHadHooks = previous ? previous.configHadHooks : Object.hasOwn(config, 'hooks');
     configHadVersion = previous ? previous.configHadVersion : Object.hasOwn(config, 'version');
     if (config.hooks !== undefined && (!config.hooks || typeof config.hooks !== 'object' || Array.isArray(config.hooks))) throw new Error(`Expected hooks object: ${configFile}`);
-    config.hooks ||= {};
     removeEntries(config, previous?.entries || []);
-    for (const event of [spec.start, spec.stop]) {
+    if (!options.skillsOnly) {
+      const event = spec.start;
+      config.hooks ||= {};
       if (config.hooks[event] !== undefined && !Array.isArray(config.hooks[event])) throw new Error(`Expected hook array for ${event}: ${configFile}`);
       const entry = hookEntry(target, event, cli);
       config.hooks[event] ||= [];
       config.hooks[event].push(entry);
       entries.push({ event, entry });
     }
-    if (target === 'cursor' && config.version === undefined) config.version = 1;
-    changes.push({ path: configFile, content: `${JSON.stringify(config, null, 2)}\n`, before });
+    if (target === 'cursor' && !options.skillsOnly && config.version === undefined) config.version = 1;
+    if (options.skillsOnly && !configHadHooks && config.hooks && !Object.keys(config.hooks).length) delete config.hooks;
+    if (options.skillsOnly && target === 'cursor' && !configHadVersion && config.version === 1 && !config.hooks) delete config.version;
+    if (!options.skillsOnly || previous?.entries.length) changes.push({ path: configFile, content: configCreated && !Object.keys(config).length ? null : `${JSON.stringify(config, null, 2)}\n`, before });
   }
-  const manifest = { version: 1, target, packageRoot, root, files, configFile, entries, configCreated, configHadHooks, configHadVersion };
-  if (!options.dryRun) await applyChanges(changes, manifestFile, manifest);
+  const manifest = { version: 1, target, packageRoot, files, configFile, entries, configCreated, configHadHooks, configHadVersion, reuseClaudeSkills: Boolean(options.reuseClaudeSkills) };
+  if (!options.dryRun) await applyChanges([...changes, { path: manifestFile, content: `${JSON.stringify(manifest, null, 2)}\n`, before: manifestBefore }]);
   return {
     target, dryRun: Boolean(options.dryRun), files: changes.map((item) => item.path),
-    mode: target === 'generic' ? 'manual-handoff' : 'skills-and-hooks',
+    mode: target === 'generic' ? 'manual-handoff' : options.skillsOnly ? 'skills-only' : 'skills-and-hooks',
     verifiedAutomaticCapture: false,
-    next: target === 'codex' ? 'Restart Codex, open /hooks, and review and trust the Nail definitions. Policies can disable user hooks.' : target === 'generic' ? 'Use the Nail setup prompt and Markdown import/export in the chat tool.' : `Restart ${target} and review hook trust if requested. Run a real session before claiming automatic capture.`,
+    next: target === 'generic' ? 'Use the Nail setup prompt and Markdown import/export in the chat tool.' : options.skillsOnly ? 'Restart the host and invoke a Nail skill explicitly.' : 'Restart the host, review hook trust, and enable tracking only in the workspaces you choose.',
   };
 }
 
-export async function uninstall(target, options = {}) {
+async function uninstallLocked(target, options) {
   const { home, manifest: manifestFile } = locations(target, options);
-  const manifest = await readJson(manifestFile);
+  const manifestBefore = await readOptional(manifestFile);
+  const manifest = parseJson(manifestBefore, manifestFile);
   if (!manifest) return { target, installed: false, preserved: [], dryRun: Boolean(options.dryRun) };
   validateManifest(manifest, target, home);
   const preserved = [];
   const removable = [];
+  const changes = [];
   for (const file of manifest.files) {
+    await assertInside(home, file.path);
     const content = await readOptional(file.path);
     if (content === null) continue;
     if (digest(content) !== file.sha256) preserved.push(file.path);
-    else removable.push(file);
+    else {
+      removable.push(file);
+      changes.push({ path: file.path, content: file.before, before: content });
+    }
   }
-  let config;
-  if (manifest.configFile) {
-    config = await readJson(manifest.configFile);
+  if (manifest.configFile && manifest.entries.length) {
+    await assertInside(home, manifest.configFile);
+    const before = await readOptional(manifest.configFile);
+    const config = parseJson(before, manifest.configFile);
     if (config) {
       if (config.hooks !== undefined && (!config.hooks || typeof config.hooks !== 'object' || Array.isArray(config.hooks))) throw new Error('Invalid hooks object; no files changed');
       removeEntries(config, manifest.entries);
       if (!manifest.configHadHooks && config.hooks && !Object.keys(config.hooks).length) delete config.hooks;
-      if (target === 'cursor' && !manifest.configHadVersion && config.version === 1) delete config.version;
+      if (target === 'cursor' && !manifest.configHadVersion && config.version === 1 &&
+          (manifest.configHadHooks || !Object.keys(config.hooks || {}).length)) delete config.version;
+      changes.push({ path: manifest.configFile, content: manifest.configCreated && !Object.keys(config).length ? null : `${JSON.stringify(config, null, 2)}\n`, before });
     }
   }
   if (!options.dryRun) {
-    if (config) {
-      if (manifest.configCreated && !Object.keys(config).length) await unlink(manifest.configFile);
-      else await atomicWrite(manifest.configFile, `${JSON.stringify(config, null, 2)}\n`);
-    }
-    for (const file of removable) {
-      if (file.before === null) await unlink(file.path);
-      else await atomicWrite(file.path, file.before);
-    }
-    if (preserved.length) {
-      manifest.files = manifest.files.filter((item) => preserved.includes(item.path));
-      manifest.entries = [];
-      await atomicWrite(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`);
-    } else await unlink(manifestFile);
+    manifest.files = manifest.files.filter((item) => preserved.includes(item.path));
+    manifest.entries = [];
+    await applyChanges([...changes, { path: manifestFile, content: preserved.length ? `${JSON.stringify(manifest, null, 2)}\n` : null, before: manifestBefore }]);
   }
   return { target, installed: preserved.length > 0, removed: removable.map((item) => item.path), preserved, dryRun: Boolean(options.dryRun) };
 }
@@ -208,16 +258,18 @@ export async function inspectInstallations(options = {}) {
       installation = await readJson(manifest);
       validateManifest(installation, target, home);
       if (installation) {
+        if (installation.entries.some(({ event }) => event !== targets[target].start)) issues.push(`Older hooks installed. Rerun install --target ${target} to update them.`);
+        if (installation.reuseClaudeSkills && !await hasCurrentClaudeSkills(home, installation.packageRoot)) issues.push('Cursor relies on missing, old, or edited Claude skills. Reinstall Claude or install standalone Cursor skills.');
         if (installation.files.some(file => legacySkillNames.includes(path.basename(path.dirname(file.path))))) issues.push(`Older short skill names installed. Rerun install --target ${target} to update them.`);
         for (const file of installation.files) {
           const content = await readOptional(file.path);
           if (content === null) missing.push(file.path);
-          else if (digest(content) !== file.sha256) issues.push(`Edited installed skill: ${file.path}`);
+          else if (digest(content) !== file.sha256) issues.push(`Edited installed ${file.path.endsWith('.mdc') ? 'rule' : 'skill'}: ${file.path}`);
         }
         if (installation.configFile) {
           const config = await readJson(installation.configFile);
           for (const { event, entry } of installation.entries) {
-            if (!Array.isArray(config?.hooks?.[event]) || !config.hooks[event].some((value) => JSON.stringify(value) === JSON.stringify(entry))) issues.push(`Missing ${event} hook in ${installation.configFile}`);
+            if (!Array.isArray(config?.hooks?.[event]) || !config.hooks[event].some(value => isDeepStrictEqual(value, entry))) issues.push(`Missing ${event} hook in ${installation.configFile}`);
           }
         }
       }

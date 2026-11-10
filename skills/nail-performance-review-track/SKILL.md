@@ -7,7 +7,11 @@ description: Record meaningful achievements and check goal alignment while helpi
 
 Use the installed nail-performance-review CLI at `{{NAIL_PACKAGE_ROOT}}/bin/nail.mjs`. If unresolved, find the package root two directories above this skill file. Quote paths and run the CLI with Node.
 
-Load `context` for the selected record and project. Read the record's AGENTS.md, profile, goals, and expectations when the bounded context omits something needed for a decision.
+For automatic capture, start only when the startup hook says tracking is active for this workspace. At a meaningful milestone run `context --tracking` from the workspace root. If it fails, skip capture quietly. Do not fall back to ordinary context, guess the record, or read private files directly. Add `--project ID` when you know the matching project.
+
+Use the exact record directory returned by tracking context as `--root` for subsequent commands in that capture. This keeps repository bindings from selecting a different record. Keep private record content out of work artifacts and normal task responses.
+
+If the user explicitly asks to track work in this chat, confirm which record to use if unclear, then load ordinary `context` for that record and project.
 
 Respect host plan or read-only mode. Do not write performance notes while writes are prohibited. If no record exists, route to nail-performance-review-setup rather than creating a hidden record.
 
@@ -41,4 +45,4 @@ If the project is nearly ready or complete and its outcome is not yet documented
 
 Then consider one follow-up under their saved development goal and actual company ladder. Examples include a broader demo, documenting lessons, or applying the learning elsewhere. Call the sharing reminder before suggesting it. Do not give a generic checklist or force another prompt when the shared budget suppresses it.
 
-Report saved evidence IDs and the record path briefly. Do not turn each capture into another discussion or claim success if the CLI failed.
+Report saved evidence IDs and the record path when the user asks. Do not claim success if the CLI failed.

@@ -4,7 +4,6 @@ import { fixture } from './fixtures.mjs';
 import { nudge } from '../src/nudges.mjs';
 import { updateDocument, doctor } from '../src/records.mjs';
 import { getContext } from '../src/context.mjs';
-import { runHook } from '../src/hooks.mjs';
 import { readFile, writeFile } from 'node:fs/promises';
 
 test('reminders share session and weekly budgets across tools and do not repeat a reason', async t => {
@@ -43,10 +42,8 @@ test('a user choice is saved in Markdown, visible across tools, and suppresses o
   const saved = await nudge(root, { ...options, action: 'continue', note });
   assert.match(await readFile(saved.file, 'utf8'), /I want to work on it anyway/);
   assert.equal((await nudge(root, { ...options, session: 'claude-2' })).suppressed, 'user-choice');
-  for (const [target, event] of [['codex', 'SessionStart'], ['claude', 'SessionStart'], ['cursor', 'sessionStart'], ['gemini', 'SessionStart']]) {
-    const result = await runHook(target, event, {}, { root });
-    assert.ok((result.additional_context || result.hookSpecificOutput.additionalContext).includes(note));
-  }
+  assert.ok((await getContext(root, { tracking: true, project: options.project })).includes(note));
+  assert.ok(!(await getContext(root, { tracking: true, project: 'unrelated' })).includes(note));
   assert.equal((await nudge(root, { ...options, session: 'codex-3', reason: 'outcomes' })).shown, true);
   assert.equal((await doctor(root)).ok, true);
   await updateDocument(root, 'goals', { items: [{ id: 'community', title: 'Grow our internal community' }] });

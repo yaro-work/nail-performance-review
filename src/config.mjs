@@ -1,5 +1,6 @@
 import path from 'node:path';
 import os from 'node:os';
+import { realpath, stat } from 'node:fs/promises';
 import { readOptional, atomicWrite, withLock, slug } from './storage.mjs';
 
 export function userHome(options = {}) { return options.home || process.env.NAIL_HOME || os.homedir(); }
@@ -12,8 +13,40 @@ export async function readConfig(options = {}) {
   if (!text) return { schema: 1, records: {} };
   let config;
   try { config = JSON.parse(text); } catch { throw new Error(`Invalid configuration: ${file}`); }
-  if (config.schema !== 1 || !config.records || Array.isArray(config.records) || typeof config.records !== 'object') throw new Error(`Invalid configuration: ${file}`);
+  if (config?.schema !== 1 || !config.records || Array.isArray(config.records) || typeof config.records !== 'object' ||
+      (config.tracking !== undefined && (!Array.isArray(config.tracking) || config.tracking.some(item => !item || typeof item.workspace !== 'string' || !path.isAbsolute(item.workspace) || typeof item.record !== 'string')))) throw new Error(`Invalid configuration: ${file}`);
   return config;
+}
+
+async function workspacePath(cwd) {
+  if (typeof cwd !== 'string' || !path.isAbsolute(cwd)) throw new Error('Tracking requires an absolute workspace directory.');
+  const workspace = await realpath(cwd);
+  if (!(await stat(workspace)).isDirectory() || path.dirname(workspace) === workspace) throw new Error('Choose a specific workspace directory.');
+  return workspace;
+}
+
+export async function setTracking(options) {
+  const workspace = await workspacePath(options.cwd || process.cwd());
+  const file = configPath(options);
+  return withLock(path.dirname(file), async () => {
+    const config = await readConfig(options);
+    const tracking = (config.tracking || []).filter(item => item.workspace !== workspace);
+    if (options.enable) {
+      const record = slug(options.name || config.default, 'record name');
+      if (!Object.hasOwn(config.records, record) || !path.isAbsolute(config.records[record])) throw new Error('Choose a registered record with --name.');
+      tracking.push({ workspace, record });
+    }
+    await atomicWrite(file, `${JSON.stringify({ ...config, tracking }, null, 2)}\n`);
+    return { enabled: Boolean(options.enable), workspace };
+  });
+}
+
+export async function trackingRoot(cwd, options = {}) {
+  const workspace = await workspacePath(cwd);
+  const config = await readConfig(options);
+  const record = config.tracking?.find(item => item.workspace === workspace)?.record;
+  const root = record && Object.hasOwn(config.records, record) && config.records[record];
+  return typeof root === 'string' && path.isAbsolute(root) ? root : undefined;
 }
 export async function registerRoot(root, options = {}) {
   const name = slug(options.name || 'work', 'record name');

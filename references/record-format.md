@@ -71,7 +71,9 @@ Use `profile --stdin`, `goals --stdin`, and `project --stdin` for structured upd
 
 Changing a goal is a real context change. Reminders can become relevant again after goal revisions.
 
-Keep goals referenced by evidence. Mark them `completed` or `paused` instead of removing their identifiers.
+Keep goal IDs referenced by evidence. Set a goal status to active, completed, or paused.
+
+Project status is separate. Use `in-progress`, `delivered`, `measured`, or `paused`. Use `delivered` for a finished project.
 
 ## Correct and edit notes
 

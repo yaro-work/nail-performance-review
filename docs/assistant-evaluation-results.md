@@ -2,7 +2,7 @@
 
 For maintainers assessing the Codex pilot. November 7, 2026.
 
-Transferred as a historical test report into the clean repository. Original PRs and Git objects are not part of this repository; the linked fictional conversation records remain available.
+Transferred as a historical test report into the clean repository. The linked fictional conversations preserve earlier baselines, including a draft with incorrect credit before the correction and an inconclusive read-only run. Machine-specific tool version and install details were redacted.
 
 Nine real Codex CLI conversations on Windows passed 106 checks of saved records, commands, and hook execution. An automated GPT-6 Astra review found no failed communication criterion in those conversations.
 
@@ -25,7 +25,7 @@ The two setup replies include the saved achievement's ID and link.
 
 The offline suite passes 51 tests. The code revision also passed the six Windows, macOS, and Linux CI jobs on Node.js 22 and 24.
 
-These results cover the listed Codex conversations. The normal flow for approving startup and stop commands in Codex still needs testing. Maintainers must also test goal reminders and other assistants before expanding support claims.
+These results cover the listed Codex conversations. These earlier runs used a Stop hook that has since been removed. The normal flow for approving the current startup hook still needs testing. Maintainers must also test goal reminders and other assistants before expanding support claims.
 
 <details>
 <summary>Evidence and reproduction</summary>

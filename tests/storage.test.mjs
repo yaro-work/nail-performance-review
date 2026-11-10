@@ -6,6 +6,7 @@ import { fixture, evidence, packageRoot } from './fixtures.mjs';
 import { saveEvidence, listEvidence } from '../src/records.mjs';
 import { atomicWrite, assertInside } from '../src/storage.mjs';
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 
 test('concurrent processes preserve distinct events and suppress a replay', async t => {
   const { root, env } = await fixture(t);
@@ -31,4 +32,18 @@ test('unpublished temporary files do not appear as evidence and destinations can
   const file = path.join(root, 'settings.md');
   await atomicWrite(file, 'first'); await atomicWrite(file, 'second');
   assert.equal(await fs.readFile(file, 'utf8'), 'second');
+});
+
+test('concurrent writers recover a lock left by a killed process', async t => {
+  const { root } = await fixture(t);
+  const module = new URL('../src/storage.mjs', import.meta.url).href;
+  const child = spawn(process.execPath, ['--input-type=module', '-e', `import { withLock } from ${JSON.stringify(module)}; await withLock(process.argv[1], () => { console.log('locked'); return new Promise(() => setInterval(() => {}, 1000)); });`, root], { stdio: ['ignore', 'pipe', 'inherit'] });
+  t.after(() => child.kill());
+  await once(child.stdout, 'data');
+  const exit = once(child, 'exit');
+  child.kill();
+  await exit;
+  await Promise.all(['after-kill-a', 'after-kill-b'].map(eventId => saveEvidence(root, evidence({ eventId }))));
+  assert.equal((await listEvidence(root)).length, 2);
+  await assert.rejects(fs.stat(path.join(root, '.nail.lock')), { code: 'ENOENT' });
 });

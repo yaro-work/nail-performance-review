@@ -4,7 +4,7 @@ import { grade } from '../scripts/assistant-evaluation.mjs';
 
 const record = { id: 'entry-1', contribution: 'Reviewed the plan.', collaborators: ['Avery'], metrics: [], links: ['https://example.com/pr/123'] };
 const expected = { active: 1, history: 1, contribution: 'review', collaborator: 'Avery', metrics: 0 };
-const observation = () => ({ sandbox: 'workspace-write', completed: true, injectedContext: true, hooks: [{ event: 'SessionStart', ok: true, context: true }, { event: 'Stop', ok: true, empty: true }], active: [record], history: [record], messages: 'Saved entry-1.', commandResults: [], packet: '', before: 'same', after: 'same', file: '' });
+const observation = () => ({ sandbox: 'workspace-write', completed: true, injectedContext: true, hooks: [{ event: 'SessionStart', ok: true, context: true }], active: [record], history: [record], messages: 'Saved entry-1.', commandResults: [], packet: '', before: 'same', after: 'same', file: '' });
 
 test('a polished capture claim cannot pass without a saved record', () => {
   const observed = observation(); observed.active = []; observed.history = [];
@@ -42,7 +42,7 @@ test('an unrelated successful command cannot stand in for reading a review packe
   observed.commandResults[0].exitCode = 1;
   assert.equal(grade({ ...expected, packet: true }, observed).status, 'fail');
 });
-test('a sibling lifecycle observer cannot stand in for the Nail Stop hook', () => {
-  const observed = observation(); observed.hooks[1] = { event: 'Stop', code: 0 };
+test('an obsolete Nail Stop hook fails the evaluation', () => {
+  const observed = observation(); observed.hooks.push({ event: 'Stop', ok: true, empty: true });
   assert.equal(grade(expected, observed).status, 'fail');
 });
