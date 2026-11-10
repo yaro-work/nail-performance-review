@@ -8,6 +8,14 @@ import { registerRoot, initialRoot } from './config.mjs';
 const narrativeFields = ['contribution', 'outcome', 'collaborators'];
 const headings = { contribution: 'Contribution', outcome: 'Outcome', collaborators: 'Collaborators' };
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+export const validSessionId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(value);
+export const isIncludedEvidence = record => record.reviewStatus === undefined || record.reviewStatus === 'included';
+
+function checkCandidateAmendment(parent, replacement) {
+  if (replacement.reviewStatus === 'candidate' && parent.reviewStatus !== 'candidate') {
+    throw new Error('This entry has already been reviewed. Save new progress as a separate candidate.');
+  }
+}
 export function object(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected a JSON object.');
   return value;
@@ -37,7 +45,7 @@ function url(value) {
 }
 export function evidenceInput(input) {
   object(input);
-  const accepted = ['id', 'eventId', 'date', 'project', 'goals', 'source', 'state', 'basis', ...narrativeFields, 'links', 'metrics', 'supersedes'];
+  const accepted = ['id', 'eventId', 'date', 'project', 'goals', 'source', 'state', 'basis', 'reviewStatus', 'sessionId', 'context', ...narrativeFields, 'links', 'metrics', 'supersedes'];
   for (const key of Object.keys(input)) if (!accepted.includes(key)) throw new Error(`Unknown evidence field: ${key}`);
   const result = { ...input };
   if (input.id !== undefined) {
@@ -54,6 +62,12 @@ export function evidenceInput(input) {
   text(input.source, 'source', true);
   if (!['in-progress', 'delivered', 'measured'].includes(input.state)) throw new Error('Invalid delivery state.');
   if (!['observed', 'reported', 'inferred'].includes(input.basis)) throw new Error('Invalid evidence basis.');
+  if (input.reviewStatus !== undefined && !['candidate', 'included', 'excluded'].includes(input.reviewStatus)) throw new Error('Invalid evidence review status.');
+  if (input.sessionId !== undefined && !validSessionId(input.sessionId)) throw new Error('Invalid session ID. Use the opaque ID supplied by the AI host.');
+  if (input.context !== undefined) {
+    result.context = text(input.context, 'work context', true).trim();
+    if (result.context.length > 600) throw new Error('Keep work context at 600 characters or fewer.');
+  }
   result.contribution = text(input.contribution, 'contribution', true).trim();
   result.outcome = text(input.outcome, 'outcome').trim();
   if (/^## (Contribution|Outcome|Collaborators)\s*$/m.test(result.contribution + '\n' + result.outcome)) throw new Error('Narrative contains a reserved record heading.');
@@ -246,6 +260,7 @@ export async function listEvidence(root, { start, end, includeSuperseded = false
       seen.add(current.id);
       const parent = ids.get(current.supersedes);
       if (!parent || parent.project !== record.project) throw new Error(`Missing or unrelated correction target: ${current.supersedes}`);
+      checkCandidateAmendment(parent, current);
       current = parent;
     }
   }
@@ -257,6 +272,10 @@ async function saveEvidenceUnlocked(root, input, { amendment = false } = {}) {
   await checkGoals(root, value.goals);
   if (Boolean(value.supersedes) !== amendment) throw new Error(amendment ? 'amend requires supersedes.' : 'Use amend for corrections.');
   const all = await listEvidence(root, { includeSuperseded: true });
+  const parent = amendment && all.find(record => record.id === value.supersedes);
+  if (parent) for (const key of ['reviewStatus', 'sessionId', 'context']) {
+    if (value[key] === undefined && parent[key] !== undefined) value[key] = parent[key];
+  }
   const duplicates = all.filter(record => (value.eventId && record.eventId === value.eventId && record.source === value.source) || (value.id && record.id === value.id));
   if (duplicates.length) {
     const existing = duplicates[0];
@@ -266,9 +285,9 @@ async function saveEvidenceUnlocked(root, input, { amendment = false } = {}) {
     return { ...existing, duplicate: true };
   }
   if (amendment) {
-    const parent = all.find(record => record.id === value.supersedes);
     if (!parent || parent.project !== value.project) throw new Error('Correction target is missing or belongs to another project.');
     if (all.some(record => record.supersedes === value.supersedes)) throw new Error('This record already has a correction. Amend the latest correction instead.');
+    checkCandidateAmendment(parent, value);
   }
   const record = { ...value, id: value.id || randomUUID(), recordedAt: new Date().toISOString() };
   const file = await assertInside(root, path.join(root, 'years', record.date.slice(0, 4), 'evidence', `${record.id}.md`));
@@ -277,6 +296,19 @@ async function saveEvidenceUnlocked(root, input, { amendment = false } = {}) {
 }
 export async function saveEvidence(root, input, options = {}) {
   return withLock(root, () => saveEvidenceUnlocked(root, input, options));
+}
+export async function triageEvidence(root, id, action) {
+  if (typeof id !== 'string' || !uuid.test(id) || !['include', 'exclude'].includes(action)) {
+    throw new Error('Use triage --id EVIDENCE_ID --action include|exclude.');
+  }
+  return withLock(root, async () => {
+    const original = (await listEvidence(root)).find(record => record.id === id.toLowerCase());
+    if (!original) throw new Error('No current evidence has that ID. Use the latest record ID.');
+    const reviewStatus = action === 'include' ? 'included' : 'excluded';
+    if ((original.reviewStatus || 'included') === reviewStatus) return original;
+    const { id: previous, file, recordedAt, eventId, ...record } = original;
+    return saveEvidenceUnlocked(root, { ...record, reviewStatus, supersedes: previous }, { amendment: true });
+  });
 }
 export async function doctor(root) {
   const errors = [];
@@ -298,7 +330,7 @@ export async function doctor(root) {
 }
 export async function exportBundle(root, options = {}) {
   const all = await listEvidence(root, { includeSuperseded: true });
-  const selected = await listEvidence(root, options);
+  const selected = (await listEvidence(root, options)).filter(isIncludedEvidence);
   const included = new Map(selected.map(record => [record.id, record]));
   for (const record of selected) {
     let parent = record;
@@ -338,7 +370,9 @@ export async function importBundle(root, content) {
         if (!isDeepStrictEqual(clean(old), record)) throw new Error('Conflicting handoff record.');
       }
       if (record.supersedes && !old) {
-        if (corrections.has(record.supersedes) || staged.get(record.supersedes)?.project !== record.project) throw new Error('Conflicting or unrelated handoff correction.');
+        const parent = staged.get(record.supersedes);
+        if (corrections.has(record.supersedes) || parent?.project !== record.project) throw new Error('Conflicting or unrelated handoff correction.');
+        checkCandidateAmendment(parent, record);
         corrections.set(record.supersedes, record.id);
       }
       staged.set(record.id, record);

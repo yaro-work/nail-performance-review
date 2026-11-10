@@ -42,6 +42,9 @@ Projects and goals use stable short IDs. Record a goal and project before referr
 | `source` | Tool or source that captured the note. |
 | `state` | `in-progress`, `delivered`, or `measured`. |
 | `basis` | `observed`, `reported`, or `inferred`. |
+| `reviewStatus` | `candidate` awaits a decision, `included` can appear in reviews, and `excluded` stays in private history. Records without this field are included. |
+| `sessionId` | Optional opaque ID supplied by the host. Omit unknown IDs and keep transcript paths out. |
+| `context` | Optional short summary of why the work came up and what happened, up to 600 characters. |
 | `contribution` | The person's action, without claiming a collaborator's work. |
 | `outcome` | The result and any relevant limits. |
 | `collaborators` | People or teams who contributed. |

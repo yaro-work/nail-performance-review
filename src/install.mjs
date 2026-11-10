@@ -6,17 +6,17 @@ import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { assertInside, withLock } from './storage.mjs';
+import { hookEvents } from './hooks.mjs';
 
 const ownRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const skillNames = ['nail-performance-review-setup', 'nail-performance-review-track', 'nail-performance-review-review', 'nail-performance-review-report'];
 const legacySkillNames = ['nail-setup', 'nail-track', 'nail-review', 'nail-report'];
 const cursorRule = '.cursor/rules/nail-performance-review.mdc';
-const claudeEvents = ['SessionStart', 'UserPromptSubmit'];
 const targets = {
-  codex: { skills: '.agents/skills', config: '.codex/hooks.json', start: 'SessionStart', stop: 'Stop' },
-  claude: { skills: '.claude/skills', config: '.claude/settings.json', start: 'SessionStart', stop: 'Stop' },
-  cursor: { skills: '.cursor/skills', config: '.cursor/hooks.json', start: 'sessionStart', stop: 'stop' },
-  gemini: { skills: '.gemini/skills', config: '.gemini/settings.json', start: 'SessionStart', stop: 'AfterAgent' },
+  codex: { skills: '.agents/skills', config: '.codex/hooks.json' },
+  claude: { skills: '.claude/skills', config: '.claude/settings.json' },
+  cursor: { skills: '.cursor/skills', config: '.cursor/hooks.json' },
+  gemini: { skills: '.gemini/skills', config: '.gemini/settings.json' },
   generic: { skills: '.nail/prompts' },
 };
 
@@ -89,7 +89,7 @@ function removeEntries(config, entries, target, cli) {
     if (!config.hooks[event].length) delete config.hooks[event];
   }
   if (target !== 'claude') return;
-  for (const event of [...claudeEvents, 'Stop']) {
+  for (const event of [...hookEvents.claude, 'Stop']) {
     if (!Array.isArray(config.hooks?.[event])) continue;
     const owned = hookEntry(target, event, cli);
     const args = [normalize(cli), 'hook', '--target', target, '--event', event];
@@ -251,7 +251,7 @@ async function installLocked(target, options, claudeSkillsPlanned = false) {
     removeEntries(config, previous?.entries || [], target, cli);
     if (!options.skillsOnly) {
       config.hooks ||= {};
-      for (const event of target === 'claude' ? claudeEvents : [spec.start]) {
+      for (const event of hookEvents[target]) {
         if (config.hooks[event] !== undefined && !Array.isArray(config.hooks[event])) throw new Error(`Expected hook array for ${event}: ${configFile}`);
         const entry = hookEntry(target, event, cli);
         config.hooks[event] ||= [];
@@ -334,7 +334,7 @@ export async function inspectInstallations(options = {}) {
       installation = await readJson(manifest);
       validateManifest(installation, target, home);
       if (installation) {
-        const events = target === 'claude' ? claudeEvents : [targets[target].start];
+        const events = hookEvents[target] || [];
         if (installation.entries.length && (events.some(event => !installation.entries.some(entry => entry.event === event)) ||
             installation.entries.some(({ event, entry }) => !events.includes(event) || (target === 'claude' && entry.hooks?.some(hook => hook.args))))) {
           issues.push(`Older hooks installed. Run update to replace them.`);

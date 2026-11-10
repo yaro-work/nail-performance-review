@@ -30,11 +30,18 @@ export function grade(expected, observed) {
   check('history record count', observed.history.length === expected.history);
   if (expected.active) {
     check('personal contribution', observed.active.every(r => r.contribution.toLowerCase().includes(expected.contribution)));
-    check('collaborator retained', observed.active.every(r => r.collaborators.some(c => c.includes(expected.collaborator))));
+    if (expected.collaborator) check('collaborator retained', observed.active.every(r => r.collaborators.some(c => c.includes(expected.collaborator))));
     check('no invented measurements', observed.active.every(r => r.metrics.length === expected.metrics));
     if (expected.goalIds) check('goal links match the reported work', observed.active.every(r =>
       r.goals.length === expected.goalIds.length && expected.goalIds.every(id => r.goals.includes(id))));
-    check('supporting PR retained', observed.active.every(r => r.links.includes('https://example.com/pr/123')));
+    if (expected.link !== false) check('supporting PR retained', observed.active.every(r => r.links.includes('https://example.com/pr/123')));
+    if (expected.candidate) {
+      check('candidate saves brief context and the actual host session', observed.active.every(r =>
+        r.reviewStatus === 'candidate' && r.state === expected.candidate && r.context && r.sessionId === observed.session));
+      check('review keeps candidates pending', observed.packet.includes('1 candidate entry') &&
+        observed.active.every(r => !observed.packet.includes(r.id)));
+      check('native prompt hook sent a reminder', observed.hooks.some(h => h.event === 'UserPromptSubmit' && h.ok && h.context));
+    }
     if (expected.context === false || expected.packet) check('saved evidence cited', observed.active.every(r => observed.messages.includes(r.id) || observed.messages.includes('https://example.com/pr/123')));
   }
   if (expected.correction) check('correction preserves original', observed.active[0]?.supersedes === observed.history.find(r => !r.supersedes)?.id);
@@ -143,11 +150,11 @@ async function runCase(base, scenario, model, executable) {
     if (!turns.at(-1).completed || !session) break;
   }
   let active = [], history = [], packet = '', recordError;
-  try { active = await listEvidence(root); history = await listEvidence(root, { includeSuperseded: true }); packet = (await reviewPacket(root, { period: '2026-H1' })).markdown; }
+  try { active = await listEvidence(root); history = await listEvidence(root, { includeSuperseded: true }); packet = (await reviewPacket(root, { period: scenario.expected.candidate ? '2026' : '2026-H1' })).markdown; }
   catch (error) { recordError = error.message; }
   const runtime = session ? await sessionEvidence(session) : { sandbox: 'unknown', context: false };
   const hooks = (await read(journal)).split('\n').filter(Boolean).map(JSON.parse);
-  const observed = { sandbox: runtime.sandbox, injectedContext: runtime.context, active, history, packet, recordError, hooks, messages: messages.join('\n\n'), commandResults, completed: turns.length === scenario.turns.length && turns.every(t => t.completed), before, after: await snapshot(root), file: scenario.expected.file ? await read(path.join(project, scenario.expected.file)) : '' };
+  const observed = { session, sandbox: runtime.sandbox, injectedContext: runtime.context, active, history, packet, recordError, hooks, messages: messages.join('\n\n'), commandResults, completed: turns.length === scenario.turns.length && turns.every(t => t.completed), before, after: await snapshot(root), file: scenario.expected.file ? await read(path.join(project, scenario.expected.file)) : '' };
   observed.priorityDecisions = await readPriorityDecisions(root);
   observed.goals = await readDocument(root, 'goals').then(doc => doc.items, () => []);
   observed.reminders = JSON.parse(await read(path.join(root, '.nail-reminders.json')) || '{"receipts":[]}');

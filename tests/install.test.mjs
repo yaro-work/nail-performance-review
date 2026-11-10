@@ -208,9 +208,10 @@ test('installation inspection reports removed hooks and edited skills', async (t
   await writeFile(path.join(options.home, '.agents/skills/nail-performance-review-track/SKILL.md'), 'Changed by user.');
   await put(path.join(options.home, '.codex/hooks.json'), { hooks: {} });
   const status = (await inspectInstallations(options)).find((item) => item.target === 'codex');
-  assert.equal(status.issues.length, 2);
+  assert.equal(status.issues.length, 3);
   assert.match(status.issues.join('\n'), /Edited installed skill/);
   assert.match(status.issues.join('\n'), /Missing SessionStart hook/);
+  assert.match(status.issues.join('\n'), /Missing UserPromptSubmit hook/);
   assert.equal(status.verifiedAutomaticCapture, false);
 });
 

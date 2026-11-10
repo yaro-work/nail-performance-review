@@ -13,6 +13,8 @@ Resolve the selected record and review period. Use explicit start and end dates 
 
 Run `doctor`, then `review` for the selected period. The CLI prepares evidence. You write the review. Do not describe a raw evidence packet as an AI-written self-review.
 
+If the packet reports pending candidates, offer to show the inbox. Only use candidates that the user chooses to include. If the user wants a draft now, use the included evidence.
+
 The packet includes full company expectations and manager notes. Use expectations for the current and requested target roles, and feedback relevant to the review period. Do not rely on the shortened startup context or copy unrelated private feedback into the draft.
 
 The default review command returns its packet without writing files. It can be used in a read-only session. Do not use `--output` when writes are prohibited.

@@ -1,11 +1,28 @@
-# Help someone set up nail-performance-review
+# Install nail-performance-review with an AI
 
-Follow this guide when the user shares the repository and asks you to install or set it up. During installation, use one short message and one action per step. Summarize tool results in plain language and keep diagnostic output available if asked.
+When the latest request is to install this repo, switch to installation. Ignore earlier unrelated work. Follow the first matching row. Copy only its reply, without a preamble or recap. A phone or hosted chat does not tell you which app is on the user's computer.
 
-1. **Choose an AI tool.** If the user hasn't named one, ask “Which AI tool do you want to set up first?” If the chat can't access files on their machine, give them the manual setup prompt or ask them to open their local AI tool. [Manual setup](../prompts/start.md)
-2. **Install.** Check for Git and Node.js 22 or later. If a prerequisite is missing, give one official download link. For local Claude Code, give the user the [native install command](install.md#install-through-claude-code) to enter in Claude. For other tools, reuse an existing clone and run one command at a time. If the user already chose the terminal installer for Claude and Cursor imports those skills, use `--reuse-claude-skills` for Cursor. [Install commands](../README.md#install-it)
-3. **Handle a permission block.** If the AI tool refuses to change its own settings, give the user the exact command to run in their terminal. Identify the plugin folder separately. Wait for the result before continuing. Keep the existing permission settings.
-4. **Start setup.** Once installed, say “Installed for <tool>. Open a new chat and say **Help me set up my performance record.**” Mention a pending hook trust step if the host requires one. If the skill is already available in this chat, follow its short questionnaire here. [Setup skill](../skills/nail-performance-review-setup/SKILL.md)
-5. **Check the result.** After setup, verify that the goal was saved. If the user enabled automatic tracking, verify the exact folder and tell them to open a new chat there. If they want to test capture, use a real milestone or a clearly separate test record. [Tracking checks](install.md#check-automatic-tracking)
+| Situation | First reply |
+|---|---|
+| The AI tool blocked the install command. | `In the plugin folder, run:` followed by the exact blocked command in a fenced code block. |
+| The user asks to install on their computer, but the local app is unknown. | Which app should I install it in? Codex, Claude Code, Cursor, or Gemini CLI. |
+| The user chose Claude Code and asks what to paste. | `In Claude Code, paste:` followed by the command below in a fenced code block. |
+| The chosen local tool is known and you can run commands. | Run the setup checks quietly. Reply only when you need an action or can confirm installation. |
+| The user explicitly asks to install inside the hosted chat itself. | Open your local AI tool and paste this repository link there. |
 
-For an existing installation, follow the [update steps](../README.md#update-it) instead of repeating setup. If the host blocks the update, use the same terminal handoff in step 3.
+For local Claude Code with Git and Node.js 22 or later, the paste command is:
+
+```text
+/plugin install nail-performance-review --marketplace yaro-work/nail-performance-review
+```
+
+If a required program is missing, give one official download link and wait. For an existing terminal install of Claude, use the [switching steps](install.md#install-through-claude-code) to avoid duplicate skills and hooks.
+
+1. For Codex, Cursor, or Gemini CLI, check Git and Node.js 22 or later. Reuse the clone if present. Run the matching [terminal command](../README.md#install-it) and check the result. Group these operations in one tool call when possible. Preview only if asked.
+2. If a command is blocked, use the reply above and wait for the result. Keep the existing permissions.
+3. After installing or updating Codex hooks, reply “Open `/hooks` and trust the nail-performance-review hooks.” Wait for the user to confirm. For any other pending trust step, give that action first.
+4. When setup can begin, reply “Installed for TOOL. Open a new chat and say ‘Help me set up my performance record.’”
+
+Do not narrate prerequisites, file writes, or verification. If your host requires an opening update, say only “Checking setup.” Use no further progress messages during these short steps.
+
+Use the [setup skill](../skills/nail-performance-review-setup/SKILL.md) after installation. Its short questionnaire covers role, period, and goals. For an existing installation, use the [update steps](../README.md#update-it).

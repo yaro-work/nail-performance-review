@@ -75,7 +75,7 @@ Nail uses a startup hook. Node.js 22 or newer must be on the host’s PATH. In C
 
 If Claude Code blocks an installation command, run that same command in your terminal from the plugin folder. Leave Claude's permission settings as they are. [Claude Code settings](https://code.claude.com/docs/en/settings)
 
-Claude Code also checks prompts for milestone cues in enabled workspaces. The CLI installer stores complete commands in user settings. The separate Claude plugin manifest uses Claude's documented argument-list format in its bundled hook file. [Claude Code hook formats](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form)
+Claude Code, Codex, and Gemini CLI also remind the AI at the start of a turn in enabled workspaces. The Claude CLI installer stores complete commands in user settings. The separate Claude plugin manifest uses Claude's argument-list format in its bundled hook file. [Claude Code hook formats](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form)
 
 Native plugin manifests are also included for manual host plugin loading. Installing files does not prove the host has activated them.
 
@@ -121,9 +121,11 @@ To keep only manual skills, install with `--skills-only`. If Cursor already impo
 node bin/nail.mjs tracking --status --cwd "/absolute/path/to/project"
 ```
 
-The folder check confirms your choice. The real milestone checks whether your AI can follow the instruction and save the achievement. Fictional tasks, planning, and routine edits can leave the record empty. Use a separate record if you want to save fictional test data.
+The folder check confirms your choice. The real work checks whether your AI can follow the instruction and save a candidate. A quick fix or useful diagnosis counts. Use a separate record if you want to save fictional test data.
 
 If your AI misses a milestone, say **“Save this to my performance record.”** If it asks for permission to write, review the destination before approving.
+
+Ask **“Show my saved candidates”** to check what the AI saved. Say which entries to include or leave out. In the plugin folder, `node bin/nail.mjs inbox` lists candidates for the current review period. Use `node bin/nail.mjs triage --id ID --action include` to include an entry, or use `exclude` to leave it out.
 
 ## Use several tools or records
 
