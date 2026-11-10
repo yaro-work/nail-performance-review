@@ -14,10 +14,11 @@ import { atomicWrite, assertInside, readOptional } from '../src/storage.mjs';
 import { install, uninstall, inspectInstallations, updateInstallations } from '../src/install.mjs';
 import { runHook } from '../src/hooks.mjs';
 import { pullAndRefresh } from '../src/update.mjs';
+import { checkForUpdate, currentVersion, setUpdateNotifications } from '../src/update-notices.mjs';
 import { claimManagerRefresh, completeManagerRefresh, configureManagerSource, lookupManagerSource, managerSourceStatus, pauseManagerRefresh, readManagerSources } from '../src/manager-source.mjs';
 import { trackingHealth } from '../src/health.mjs';
 
-const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable|--disable|--reset|--status [--all|--cwd FOLDER]  Control automatic tracking\n    Add --recursive to enable a folder and its descendants. Use tracking --manual to turn off automatic capture.\n  health [--cwd FOLDER]         Show tracking scope and recent saved candidates\n  inbox [--period YYYY]         List achievements awaiting review\n  triage --id ID --action include|exclude\n  manager-source                Manage linked document checks\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  week [--start DATE --end DATE]  Prepare weekly 1:1 evidence\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--pull|--dry-run]      Refresh all terminal-managed adapters\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --manual, --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
+const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable|--disable|--reset|--status [--all|--cwd FOLDER]  Control automatic tracking\n    Add --recursive to enable a folder and its descendants. Use tracking --manual to turn off automatic capture.\n  health [--cwd FOLDER]         Show tracking scope and recent saved candidates\n  inbox [--period YYYY]         List achievements awaiting review\n  triage --id ID --action include|exclude\n  manager-source                Manage linked document checks\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  week [--start DATE --end DATE]  Prepare weekly 1:1 evidence\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--pull|--dry-run]      Refresh all terminal-managed adapters\n  update --check|--notifications on|off     Check GitHub or manage update notices\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --manual, --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
 
 async function inputJSON() {
   let text = '';
@@ -39,20 +40,20 @@ async function main() {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: Object.fromEntries([
-      ...['root', 'name', 'cwd', 'role', 'timezone', 'level', 'start', 'end', 'period', 'project', 'session', 'reason', 'action', 'note', 'days', 'target', 'event', 'output', 'input', 'id'].map(key => [key, { type: 'string' }]),
-      ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'reset', 'status', 'all', 'recursive', 'manual', 'pull', 'claim', 'checked', 'lookup', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
+      ...['root', 'name', 'cwd', 'role', 'timezone', 'level', 'start', 'end', 'period', 'project', 'session', 'reason', 'action', 'note', 'days', 'target', 'event', 'output', 'input', 'id', 'notifications'].map(key => [key, { type: 'string' }]),
+      ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'reset', 'status', 'all', 'recursive', 'manual', 'pull', 'check', 'claim', 'checked', 'lookup', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
     ]),
   });
   const [command, ...extra] = positionals;
   if (extra.length) throw new Error('Unexpected positional arguments.');
-  if (values.version) return console.log('0.1.0');
+  if (values.version) return console.log(currentVersion);
   if (!command || values.help) return console.log(help);
   const options = { ...values, dryRun: values['dry-run'] || false, packageRoot: path.dirname(path.dirname(fileURLToPath(import.meta.url))) };
   if (options.manual && command !== 'init' && command !== 'tracking') throw new Error('--manual is only used by init or tracking.');
   if (options.recursive && (command !== 'tracking' || !options.enable || options.all)) throw new Error('--recursive is only used to enable a selected folder.');
   if (options.all && command !== 'tracking') throw new Error('--all is only used by tracking.');
   if (options.reset && command !== 'tracking') throw new Error('--reset is only used by tracking.');
-  if (options.pull && command !== 'update') throw new Error('--pull is only used by update.');
+  if ((options.pull || options.check || options.notifications !== undefined) && command !== 'update') throw new Error('--pull, --check and --notifications are only used by update.');
   if (options.lookup && command !== 'manager-source') throw new Error('--lookup is only used by manager-source.');
   if (values.stdin && !['record', 'amend', 'profile', 'goals', 'project', 'manager-source'].includes(command)) throw new Error('--stdin is not used by this command.');
   let result;
@@ -123,13 +124,23 @@ async function main() {
     });
   } else if (command === 'update') {
     if (options.target || values['skills-only'] || values['reuse-claude-skills']) throw new Error('update refreshes all managed adapters in their existing modes. Use install --target to change a mode.');
+    if ([options.pull, options.check, options.dryRun, options.notifications !== undefined].filter(Boolean).length > 1) {
+      throw new Error('Choose only one update option.');
+    }
     if (options.pull) {
-      if (options.dryRun) throw new Error('Use update --dry-run to preview the current checkout, or update --pull to apply an update.');
       process.exitCode = await pullAndRefresh(options.packageRoot);
       return;
     }
-    result = await updateInstallations(options);
-    if (result.errors.length) process.exitCode = 1;
+    if (options.notifications !== undefined) {
+      if (!['on', 'off'].includes(options.notifications)) throw new Error('Use --notifications on or off.');
+      result = await setUpdateNotifications(options.notifications === 'on', options);
+    } else if (options.check) {
+      result = await checkForUpdate(options);
+      if (result.status === 'unavailable') process.exitCode = 1;
+    } else {
+      result = await updateInstallations(options);
+      if (result.errors.length) process.exitCode = 1;
+    }
   } else if (command === 'hook') {
     let payload, hookError;
     try { payload = await inputJSON(); result = await runHook(options.target, options.event, payload, options); }

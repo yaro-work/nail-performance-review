@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "nail-performance-review",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Track goals and evidence for concise performance reviews in private Markdown files.",
   "skills": "./skills/",
   "extensions": {

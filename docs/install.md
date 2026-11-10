@@ -99,6 +99,27 @@ Use `/plugin` to confirm the plugin is installed and enabled. Nail's `doctor` re
 
 Claude may still ask before writing to your private record or opening an external document. If auto mode blocks an operation, review it in Claude's **Recently blocked** permission list. [Claude Code permission modes](https://code.claude.com/docs/en/permission-modes#review-denials)
 
+### Install through Codex, Gemini, or Cursor
+
+If you already use the terminal adapter, close the AI tool. In your clone, run `node bin/nail.mjs uninstall --target TOOL` with `codex`, `gemini`, or `cursor` to avoid duplicate hooks. Your notes stay in place.
+
+**Codex CLI.** Run these two commands in your terminal. If your version lacks `codex plugin add`, add the marketplace and install from **Plugins** in the desktop app. Review the hooks in `/hooks`. [Codex CLI reference](https://learn.chatgpt.com/docs/cli/reference#codex-plugin)
+
+```sh
+codex plugin marketplace add yaro-work/nail-performance-review
+codex plugin add nail-performance-review@yaro-work-nail
+```
+
+**Gemini CLI.** Run this command in your terminal. Review the extension and hook prompts, then restart Gemini. Add `--auto-update` if you want Gemini to apply extension updates automatically. [Gemini CLI extensions](https://geminicli.com/docs/extensions/reference/)
+
+```sh
+gemini extensions install https://github.com/yaro-work/nail-performance-review
+```
+
+**Cursor.** Open **Customize → Plugins**. Choose **From GitHub Repository**, paste the repo URL, and install the plugin. If your organization blocks GitHub imports, use the terminal adapter where permitted. [Cursor repository imports](https://cursor.com/docs/skills#installing-skills-from-a-repository)
+
+Start a new chat and say **“Help me set up my performance record.”**
+
 ## Enable automatic tracking for a workspace
 
 Your first `init` enables tracking in all folders, including subfolders. Use `init --manual` to start with manual capture or to enable only the folders you choose later. Existing settings stay in place on upgrade. Complete any hook trust steps and open a new chat.
@@ -195,6 +216,25 @@ Run `node bin/nail.mjs manager-source --name work` to list source IDs. To change
 If two links are hard to tell apart, pass `{"url":"HTTPS_DOCUMENT_URL"}` on stdin to `node bin/nail.mjs manager-source --lookup --stdin --name work`. The lookup returns the matching ID without opening the document or changing its schedule.
 
 ## Upgrade or uninstall
+
+### Update a native install
+
+Use the same tool you installed with:
+
+| Install method | How to update |
+|---|---|
+| Claude Code | Open `/plugin`, select **Installed**, then choose **Update now**. |
+| Codex CLI | Run `codex plugin marketplace upgrade yaro-work-nail` and restart Codex. |
+| Gemini CLI | Run `gemini extensions update nail-performance-review` and restart Gemini. |
+| Cursor | Open **Customize → Plugins** and refresh your imported marketplace. |
+
+### Update notices
+
+The plugin starts its 14-day timer the first time you open a chat with tracking enabled. When a check is due, the next eligible startup fetches the public package version. Each AI tool gets one notice per new version. If GitHub is unreachable, the next eligible startup can retry after a day.
+
+Ask your AI **“Check for a plugin update”** or **“Turn off plugin update notices.”** From the plugin folder, use `node bin/nail.mjs update --check` or `node bin/nail.mjs update --notifications off`. Replace `off` with `on` to resume.
+
+### Update a terminal installation
 
 1. Close your AI tools.
 2. From the plugin folder, update the clone and refresh the installed adapters with one command.

@@ -18,6 +18,8 @@ For local Claude Code with Git and Node.js 22 or later, the paste command is:
 
 If a required program is missing, give one official download link and wait. For an existing terminal install of Claude, use the [switching steps](install.md#install-through-claude-code) to avoid duplicate skills and hooks.
 
+If the user wants the host’s own installer, use the [native install guide](install.md#install-through-codex-gemini-or-cursor). Do not install both methods for one tool.
+
 1. For Codex, Cursor, or Gemini CLI, check Git and Node.js 22 or later. Reuse the clone if present. Run the matching [terminal command](../README.md#install-it) and check the result. Group these operations in one tool call when possible. Preview only if asked.
 2. If a command is blocked, use the reply above and wait for the result. Keep the existing permissions.
 3. After installing or updating Codex hooks, reply “Open `/hooks` and trust the nail-performance-review hooks.” Wait for the user to confirm. For any other pending trust step, give that action first.

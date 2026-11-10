@@ -1,0 +1,11 @@
+{
+  "name": "yaro-work-nail",
+  "owner": { "name": "yaro-work" },
+  "plugins": [
+    {
+      "name": "nail-performance-review",
+      "source": "./",
+      "description": "Keep a private record of goals and achievements for your performance review."
+    }
+  ]
+}

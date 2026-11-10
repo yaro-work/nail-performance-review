@@ -4,6 +4,8 @@ For people deciding what to store in nail-performance-review. Updated November 9
 
 nail-performance-review stores notes on your computer. Its CLI does not call AI APIs, send telemetry, or create a remote account.
 
+The update check reads the public package version from GitHub. It sends no notes, workspace paths, or credentials. You can [turn off automatic checks](install.md#update-notices).
+
 Your active AI tool can read the notes you authorize it to use. That tool's data policies still apply. Local storage does not make an AI conversation private by itself.
 
 New setups track eligible local chats in all folders by default, including subfolders. Choose selected folders during setup to limit that scope. Existing setups keep their tracking choices. Hooks send a short instruction and, when available, the host's session ID. Claude Code, Codex, and Gemini CLI can send that instruction again when a prompt is submitted. The hook keeps no prompt text. Tracking context includes goals and expectations, plus evidence and priority decisions for a named project. Manager notes stay out of tracking context.
@@ -23,7 +25,7 @@ nail-performance-review's tracking workflow uses the current authorized work con
 
 Evidence can contain sensitive facts even when the original document is not copied. Review a note before sharing it.
 
-Nail keeps saved document links, check outcomes, and brief change summaries in your private performance folder. Hook messages contain no links or document contents. Each recurring check is scoped to one enabled workspace. Choose a one-time review if you prefer to skip recurring access. The active AI tool uses its authorized connector to open the link. The Nail CLI makes no network requests.
+Nail keeps saved document links, check outcomes, and brief change summaries in your private performance folder. Hook messages contain no document links or contents. Each recurring check is scoped to one enabled workspace. Choose a one-time review if you prefer to skip recurring access. The active AI tool uses its authorized connector to open the document.
 
 Public issues and support email can reach the maintainer. Use fictional examples when requesting help; do not send confidential career records or unnecessary personal information.
 
