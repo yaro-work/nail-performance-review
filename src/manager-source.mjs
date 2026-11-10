@@ -3,7 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { assertInside, atomicWrite, markdown, parseMarkdown, readOptional, withLock } from './storage.mjs';
 
 const day = 86_400_000;
+const minute = 60_000;
+const lease = 30 * minute;
+const backoff = [15 * minute, 60 * minute, day];
 const defaultIntervals = { 'one-on-one': 7, document: 30 };
+const successful = new Set(['checked', 'unchanged', 'updated']);
+const unsuccessful = new Set(['unavailable', 'partial', 'deferred']);
+const validTime = value => Number.isSafeInteger(value) && value >= 0;
+const validSummary = value => typeof value === 'string' && value.trim() && value.length <= 240 && !/[\r\n]/.test(value);
 
 const sourceFile = root => assertInside(root, path.join(root, 'manager-source.md'));
 
@@ -35,9 +42,10 @@ export async function readManagerSources(root) {
         !Object.hasOwn(defaultIntervals, source.kind) || !validInterval(source.intervalDays) ||
         (source.label !== undefined && !validLabel(source.label)) ||
         (source.intervalDays ? typeof source.workspace !== 'string' || !path.isAbsolute(source.workspace) : source.workspace !== null) ||
-        (source.lastChecked !== null && (!Number.isSafeInteger(source.lastChecked) || source.lastChecked < 0)) ||
-        (source.attempt !== null && (!source.attempt || typeof source.attempt.id !== 'string' ||
-          !Number.isSafeInteger(source.attempt.at) || source.attempt.at < 0))) throw new Error('Invalid manager-source.md.');
+        (source.lastChecked !== null && !validTime(source.lastChecked)) ||
+        (source.attempt !== null && !validAttempt(source.attempt)) ||
+        (source.lastChange !== undefined && (!source.lastChange || !validTime(source.lastChange.at) ||
+          !validSummary(source.lastChange.summary)))) throw new Error('Invalid manager-source.md.');
     validateUrl(source.url);
     validateRevision(source.revision);
     ids.add(source.id);
@@ -48,20 +56,59 @@ export async function readManagerSources(root) {
 
 const validInterval = value => Number.isInteger(value) && value >= 0 && value <= 365;
 const validLabel = value => typeof value === 'string' && value.trim() && value.length <= 120 && !/[\r\n]/.test(value);
+function validAttempt(attempt) {
+  if (!attempt || typeof attempt.id !== 'string' || !validTime(attempt.at) ||
+      (attempt.tries !== undefined && (!Number.isSafeInteger(attempt.tries) || attempt.tries < 1))) return false;
+  return attempt.outcome === undefined
+    ? attempt.finishedAt === undefined
+    : (successful.has(attempt.outcome) || unsuccessful.has(attempt.outcome)) && validTime(attempt.finishedAt);
+}
 
 async function save(root, sources) {
   await atomicWrite(await sourceFile(root), markdown({ schema: 1, type: 'document-sources', sources },
     '# Private document sources\n\nKeep these links and checkpoints inside the performance record.'));
 }
 
-export function managerSourceStatus({ id, kind, label, intervalDays, workspace, lastChecked }) {
-  return { id, kind, label, intervalDays, workspace, lastChecked };
+function activeAttempt(attempt, now) {
+  return Boolean(attempt && !attempt.outcome && now < attempt.at + lease);
+}
+
+function nextCheckAt({ intervalDays, lastChecked, attempt }) {
+  if (!intervalDays) return null;
+  const scheduled = lastChecked === null ? 0 : lastChecked + intervalDays * day;
+  if (!attempt || successful.has(attempt.outcome)) return scheduled;
+  const delay = backoff[Math.min((attempt.tries ?? 1) - 1, backoff.length - 1)];
+  const retry = attempt.outcome
+    ? attempt.finishedAt + (attempt.outcome === 'deferred' ? day : delay)
+    : attempt.at + Math.max(lease, delay);
+  return Math.max(scheduled, retry);
+}
+
+export function managerSourceStatus(source, now = Date.now()) {
+  const { id, kind, label, intervalDays, workspace, lastChecked, lastChange, attempt } = source;
+  const checking = activeAttempt(attempt, now);
+  const next = nextCheckAt(source);
+  return {
+    id, kind, label, intervalDays, workspace, lastChecked, lastChange,
+    lastAttempt: attempt ? {
+      at: attempt.at, outcome: attempt.outcome ?? (checking ? 'checking' : 'interrupted'), finishedAt: attempt.finishedAt,
+    } : null,
+    nextCheckAt: next || null,
+    status: checking ? 'checking' : next === null ? 'paused' : now >= next ? 'due' : 'scheduled',
+  };
 }
 
 export function managerRefreshDue(source, workspace, now = Date.now()) {
-  return Boolean(source?.intervalDays && source.workspace === workspace &&
-    (source.lastChecked === null || now - source.lastChecked >= source.intervalDays * day) &&
-    (!source.attempt || now - source.attempt.at >= day));
+  if (!source) return false;
+  const next = nextCheckAt(source);
+  return next !== null && source.workspace === workspace && now >= next;
+}
+
+export async function lookupManagerSource(root, input) {
+  if (!input || Object.keys(input).length !== 1) throw new Error('Provide a document URL.');
+  validateUrl(input.url);
+  const source = (await readManagerSources(root)).find(item => item.url === input.url);
+  return source ? { configured: true, ...managerSourceStatus(source) } : { configured: false };
 }
 
 export async function configureManagerSource(root, input, { workspace, authorizeWorkspace = value => value } = {}, now = Date.now()) {
@@ -93,12 +140,13 @@ export async function configureManagerSource(root, input, { workspace, authorize
       label: input.label ?? previous?.label, intervalDays, workspace: folder,
       revision: reviewed ? revision : previous?.revision ?? null,
       lastChecked: reviewed ? now : previous?.lastChecked ?? null,
-      attempt: unchanged && !reviewed ? previous.attempt : null,
+      lastChange: previous?.lastChange,
+      attempt: !reviewed && (unchanged || previous?.attempt?.outcome) ? previous.attempt : null,
     };
     if (previous) sources[index] = source;
     else sources.push(source);
     await save(root, sources);
-    return { configured: true, ...managerSourceStatus(source) };
+    return { configured: true, ...managerSourceStatus(source, now) };
   });
 }
 
@@ -106,13 +154,18 @@ export async function claimManagerRefresh(root, { id, workspace, now = Date.now(
   return withLock(root, async () => {
     const sources = await readManagerSources(root);
     if (!workspace && !id && sources.length > 1) throw new Error('Choose a document source with --id. Run manager-source to list IDs.');
-    const source = sources.find(item => (!id || item.id === id) && (!workspace || managerRefreshDue(item, workspace, now)));
+    const eligible = sources.filter(item => (!id || item.id === id) && (!workspace || managerRefreshDue(item, workspace, now)));
+    const source = eligible.sort((a, b) => (a.attempt?.at ?? 0) - (b.attempt?.at ?? 0))[0];
     if (!source) return { due: false };
-    if (source.attempt && now - source.attempt.at < day) return { due: false, inProgress: true };
-    const attempt = { id: randomUUID(), at: now };
+    if (activeAttempt(source.attempt, now)) return { due: false, inProgress: true };
+    const previous = source.attempt;
+    const tries = previous && !successful.has(previous.outcome) ? Math.min((previous.tries ?? 1) + 1, backoff.length) : 1;
+    const attempt = { id: randomUUID(), at: now, tries };
     source.attempt = attempt;
     await save(root, sources);
-    return { due: true, root, ...managerSourceStatus(source), url: source.url, revision: source.revision, checkId: attempt.id };
+    const { id: sourceId, kind, label, intervalDays, lastChecked, url, revision } = source;
+    return { due: true, root, id: sourceId, kind, label, intervalDays, workspace: source.workspace,
+      lastChecked, url, revision, checkId: attempt.id };
   });
 }
 
@@ -120,22 +173,30 @@ export async function pauseManagerRefresh(root, id) {
   return withLock(root, async () => {
     const sources = await readManagerSources(root);
     const selected = sources.filter(source => !id || source.id === id);
-    for (const source of selected) Object.assign(source, { intervalDays: 0, workspace: null, attempt: null });
+    for (const source of selected) {
+      Object.assign(source, { intervalDays: 0, workspace: null });
+      if (!source.attempt?.outcome) source.attempt = null;
+    }
     if (selected.length) await save(root, sources);
     return { paused: Boolean(selected.length) };
   });
 }
 
 export async function completeManagerRefresh(root, input, now = Date.now()) {
-  const { checkId, revision = null } = input || {};
-  if (typeof checkId !== 'string' || Object.keys(input).some(key => !['checkId', 'revision'].includes(key))) throw new Error('A document check ID is required.');
+  const { checkId, revision = null, outcome = 'checked', summary } = input || {};
+  if (typeof checkId !== 'string' || Object.keys(input).some(key => !['checkId', 'revision', 'outcome', 'summary'].includes(key))) throw new Error('A document check ID is required.');
+  const success = successful.has(outcome);
+  if ((!success && !unsuccessful.has(outcome)) || (!success && revision !== null) ||
+      (outcome === 'updated' ? !validSummary(summary) : summary !== undefined)) throw new Error('Invalid document check outcome.');
   validateRevision(revision);
   return withLock(root, async () => {
     const sources = await readManagerSources(root);
-    const source = sources.find(item => item.attempt?.id === checkId);
+    const source = sources.find(item => item.attempt?.id === checkId && !item.attempt.outcome);
     if (!source) throw new Error('This document check is no longer current.');
-    Object.assign(source, { lastChecked: now, revision, attempt: null });
+    Object.assign(source.attempt, { outcome, finishedAt: now });
+    if (success) Object.assign(source, { lastChecked: now, revision });
+    if (outcome === 'updated') source.lastChange = { at: now, summary };
     await save(root, sources);
-    return { checked: true, lastChecked: now };
+    return { checked: success, outcome, lastChecked: source.lastChecked, nextCheckAt: nextCheckAt(source) };
   });
 }

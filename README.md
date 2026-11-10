@@ -98,11 +98,13 @@ Complete any hook trust steps and open a new chat. To track just one project or 
 
 Try it with real work. A quick fix, a useful diagnosis, or work you’ve started can go into your private inbox, even without a measured outcome. Ask **“Show my saved candidates.”** Choose what to include in your review or leave out. If your AI missed something, say **“Save this to my performance record.”** [Tracking checks](docs/install.md#check-automatic-tracking)
 
+After setup or an update, ask **“Is my tracking working?”** to check this folder and see when each AI tool last saved a candidate.
+
 ### Use your goals and one-on-one notes
 
 Share a goals document or 1:1 progress notes and say **“Use this whole document to fill in my goals and achievements for this review period.”** Last year’s self-review and your manager’s review or guidance can help identify what to focus on now. Share only material you’re allowed to use with your AI tool.
 
-Prefer Google Docs or other links your AI can open. Saved manager 1:1s are checked weekly by default. Other tracked documents default to every 30 days. You can choose a different interval or a one-time review. Checks run when you open the selected workspace after they’re due. [Set up document checks](docs/install.md#check-a-manager-document-for-updates)
+Prefer Google Docs or other links your AI can open. Manager 1:1s default to weekly checks. Other tracked links default to every 30 days. Choose a different interval or a one-time review. Due checks and retries run when you use an eligible chat in the selected workspace. Ask **“What changed in my linked docs?”** to see what was checked, saved, or will retry. [Set up document checks](docs/install.md#check-a-manager-document-for-updates)
 
 ### Update it
 
@@ -117,6 +119,8 @@ node bin/nail.mjs update --pull
 Reopen your AI tools and start a new chat. Your records, tracking choices, and installation modes stay in place. If an older copy rejects `--pull`, use the [one-time upgrade steps](docs/install.md#upgrade-or-uninstall).
 
 ## Prepare a review
+
+Ask **“Review my week and prep my 1:1.”** Pick any new notes you want to use. Your AI drafts up to four short bullets grouped by goal or OKR.
 
 Ask for an annual, mid-year, or custom review. The plugin gathers the saved evidence; your AI chat drafts a concise self-review with your contributions, collaborators, goals, and links. Ask for an offline HTML overview if you’d rather browse your achievements that way.
 

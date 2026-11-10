@@ -131,6 +131,8 @@ The folder check confirms your choice. The real work checks whether your AI can 
 
 If your AI misses a milestone, say **“Save this to my performance record.”** If it asks for permission to write, review the destination before approving.
 
+After setup or an update, ask **“Is my tracking working?”** In the plugin folder, run `node bin/nail.mjs health --cwd "/absolute/path/to/project"` to see the same local checks. Installation, tracking scope, and saved candidates are separate signals.
+
 Ask **“Show my saved candidates”** to check what the AI saved. Say which entries to include or leave out. In the plugin folder, `node bin/nail.mjs inbox` lists candidates for the current review period. Use `node bin/nail.mjs triage --id ID --action include` to include an entry, or use `exclude` to leave it out.
 
 ## Use several tools or records
@@ -182,11 +184,15 @@ The import command accepts nail-performance-review's structured export format. A
 3. Say **“One-time only,” “Check this every 14 days,”** or **“Stop checking this document”** to choose another schedule or opt out.
 4. When a check is due, open a new chat in that workspace. The AI uses its existing document access and saves clear, supported changes locally. It asks about ambiguous changes.
 
-The first review covers all accessible sections. If the AI cannot read the whole document, it tells you which parts it missed. Later checks use revision information when available or review the document again. Recurring checks need an active AI chat. To prevent new checks, pause them or disable tracking for the chosen folder.
+The first review covers all accessible sections. Later checks use revision information or review the document again. Ask **“What changed in my linked docs?”** for the last attempt, saved changes, and next check.
+
+After a failed check, the next eligible chat can retry after 15 minutes, then an hour, then daily. A successful check clears the retries. If the laptop is off, the next eligible chat can pick up the overdue check. Cursor checks at chat start. Claude Code, Codex, and Gemini CLI can also check during a chat.
 
 To configure checks from a terminal, pass JSON on stdin to `node bin/nail.mjs manager-source --stdin --name work --cwd "/absolute/path/to/project"`. Use `{"url":"https://example.com/notes","kind":"one-on-one"}` for weekly checks, or add `"intervalDays":0` for manual checks. A kind of `document` defaults to 30 days.
 
 Run `node bin/nail.mjs manager-source --name work` to list source IDs. To change a schedule, pass `{"id":"SOURCE_ID","intervalDays":14}` to the same stdin command. To pause one link, run `node bin/nail.mjs manager-source --disable --id SOURCE_ID --name work`. Omit `--id` to pause all links.
+
+If two links are hard to tell apart, pass `{"url":"HTTPS_DOCUMENT_URL"}` on stdin to `node bin/nail.mjs manager-source --lookup --stdin --name work`. The lookup returns the matching ID without opening the document or changing its schedule.
 
 ## Upgrade or uninstall
 

@@ -32,7 +32,7 @@ export async function runHook(target, event, payload = {}, options = {}) {
   let text = `nail-performance-review is active for this workspace. ${capture}`;
   const sessionId = payload?.session_id ?? payload?.conversation_id;
   if (validSessionId(sessionId)) text += ` For the candidate's sessionId, use ${sessionId} (source: ${cursor ? 'cursor' : target}).`;
-  if (!promptCheck && !multiple &&
+  if (!multiple &&
       (await readManagerSources(root).catch(() => [])).some(source => managerRefreshDue(source, workspace))) {
     text += ' A scheduled document check is due. When appropriate and writes are allowed, follow the document refresh steps in the nail-performance-review-setup skill.';
   }

@@ -82,6 +82,19 @@ export function grade(expected, observed) {
   if (expected.documentRefresh) {
     check('scheduled source was checked and checkpointed', observed.sources?.some(source => source.lastChecked && source.intervalDays === 7));
     check('scheduled refresh saved a supported goal change locally', observed.goals?.some(goal => goal.id === 'reliability' && /48 hours/i.test(goal.description)));
+    check('failed connector access recorded with retry pending', observed.sources?.some(source => source.lastAttempt?.outcome === 'unavailable' && !source.lastChecked && source.nextCheckAt));
+    check('last saved document change is available', observed.sources?.some(source => /48 hours/i.test(source.lastChange?.summary)));
+    check('status describes the saved change and retry without exposing URLs', /48 hours/i.test(observed.lastMessage) &&
+      /retry|next check/i.test(observed.lastMessage) && !/example\.com/i.test(observed.lastMessage));
+  }
+  if (expected.health) check('health inspected this session’s saved candidate', observed.commandResults.some(c =>
+    c.exitCode === 0 && /\bhealth\b/.test(c.command) && /"candidateInSession":\s*true/.test(c.output)));
+  if (expected.week) {
+    check('weekly packet read through CLI', observed.commandResults.some(c =>
+      c.exitCode === 0 && /\bweek\b/.test(c.command) && c.output.includes('Make releases safer')));
+    check('brief is concise and gives the goal, personal work, and team result', observed.lastMessage.trim().split(/\s+/).length <= 80 &&
+      /Make releases safer/i.test(observed.lastMessage) && /rollout/i.test(observed.lastMessage) && /shipped/i.test(observed.lastMessage));
+    check('brief does not infer a collaborator’s role', !/with Avery[^.]{0,35}design|design[^.]{0,55}with Avery|Avery[^.]{0,35}design|co.design/i.test(observed.lastMessage));
   }
   if (expected.outcomes) check('eligible outcomes reminder used', observed.commandResults.some(c => c.exitCode === 0 && /\bnudge\b/.test(c.command) && /outcomes/.test(c.command) && /"shown":\s*true/.test(c.output)));
   if (expected.alignment) check('eligible alignment reminder used', observed.reminders.receipts.some(r => r.key.includes(':alignment:')));
@@ -140,7 +153,7 @@ async function runCase(base, scenario, model, executable) {
     if (!scenario.allFolders && scenario.expected.context !== false) await setTracking({ home, cwd: project, name: 'work', enable: true });
     await updateDocument(root, 'goals', { items: [{ id: 'reliability', title: 'Make releases safer' }] });
     await updateDocument(root, 'project', { id: 'migration', title: 'Service migration', goals: ['reliability'] });
-    if (scenario.documentSource) await configureManagerSource(root, scenario.documentSource, { workspace: project });
+    for (const source of scenario.documentSources ?? []) await configureManagerSource(root, source, { workspace: project });
   }
   if (scenario.seed) await saveEvidence(root, { eventId: 'migration-rollout', date: '2026-05-10', project: 'migration', goals: ['reliability'], source: 'codex', state: 'delivered', basis: 'reported', contribution: 'Designed the migration rollout plan.', outcome: 'The team shipped the migration.', collaborators: ['Avery'], links: ['https://example.com/pr/123'], metrics: [] });
   await install('codex', { home, root, packageRoot });
@@ -183,7 +196,7 @@ async function runCase(base, scenario, model, executable) {
   const observed = { session, sandbox: runtime.sandbox, injectedContext: runtime.context, active, history, packet, recordError, hooks, messages: messages.join('\n\n'), commandResults, completed: turns.length === scenario.turns.length && turns.every(t => t.completed), before, after: await snapshot(root), file: scenario.expected.file ? await read(path.join(project, scenario.expected.file)) : '' };
   observed.priorityDecisions = await readPriorityDecisions(root);
   observed.goals = await readDocument(root, 'goals').then(doc => doc.items, () => []);
-  observed.sources = await readManagerSources(root).then(sources => sources.map(managerSourceStatus), () => []);
+  observed.sources = await readManagerSources(root).then(sources => sources.map(source => managerSourceStatus(source)), () => []);
   observed.reminders = JSON.parse(await read(path.join(root, '.nail-reminders.json')) || '{"receipts":[]}');
   observed.lastMessage = messages.at(-1) || '';
   if (scenario.expected.setupTracking) observed.setupTurns = turns.map(({ assistant, trackingEnabled, allTracking }) => ({ assistant, trackingEnabled, allTracking }));

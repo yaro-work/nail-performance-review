@@ -23,7 +23,7 @@ nail-performance-review's tracking workflow uses the current authorized work con
 
 Evidence can contain sensitive facts even when the original document is not copied. Review a note before sharing it.
 
-Nail keeps saved document links and review checkpoints in your private performance folder. The startup message contains neither links nor document contents. Each recurring check is scoped to one enabled workspace. Choose a one-time review if you prefer to skip recurring access. The active AI tool uses its authorized connector to open the link. The Nail CLI makes no network requests.
+Nail keeps saved document links, check outcomes, and brief change summaries in your private performance folder. Hook messages contain no links or document contents. Each recurring check is scoped to one enabled workspace. Choose a one-time review if you prefer to skip recurring access. The active AI tool uses its authorized connector to open the link. The Nail CLI makes no network requests.
 
 Public issues and support email can reach the maintainer. Use fictional examples when requesting help; do not send confidential career records or unnecessary personal information.
 
