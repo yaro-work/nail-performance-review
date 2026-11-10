@@ -25,4 +25,4 @@ If a required program is missing, give one official download link and wait. For 
 
 Do not narrate prerequisites, file writes, or verification. If your host requires an opening update, say only “Checking setup.” Use no further progress messages during these short steps.
 
-Use the [setup skill](../skills/nail-performance-review-setup/SKILL.md) after installation. Its short questionnaire covers role, period, and goals. For an existing installation, use the [update steps](../README.md#update-it).
+Use the [setup skill](../skills/nail-performance-review-setup/SKILL.md) after installation. At onboarding, say that automatic tracking is on for all folders by default and that the user can say “Switch to manual tracking.” For an existing installation, use the [update steps](../README.md#update-it).

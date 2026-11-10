@@ -64,6 +64,7 @@ test('automatic context selects the opted-in record, ignoring repository binding
   await fs.mkdir(workspace);
   await fs.writeFile(path.join(workspace, '.nail.json'), '{"schema":1,"record":"other"}');
   await fs.writeFile(path.join(root, 'manager-notes.md'), 'PRIVATE-FEEDBACK-SENTINEL');
+  assert.equal((await cli(['tracking', '--manual'], env)).code, 0);
   assert.equal((await cli(['init', '--name', 'other', '--root', path.join(base, 'other'), '--role', 'OTHER-RECORD-SENTINEL'], env)).code, 0);
   const args = ['context', '--tracking', '--cwd', workspace];
   assert.equal((await cli(args, env)).code, 1);

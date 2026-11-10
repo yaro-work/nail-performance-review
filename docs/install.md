@@ -14,7 +14,7 @@ See the [verification results](verification.md) for which workflows we ran in re
 
 1. Clone the repository into a folder you will keep.
 2. Initialize a record outside your source repositories.
-3. Check that the command reports the intended absolute record path.
+3. Check that the command reports the intended absolute record path. Automatic tracking defaults to all folders. If you prefer manual capture, add `--manual` to `init`.
 
 <details>
 <summary>Commands</summary>
@@ -89,7 +89,7 @@ Use this option in a local Claude Code session. Install Git and Node.js 22 or la
 
 1. If you installed Claude with the Nail CLI, close Claude Code and remove that adapter from its clone with `node bin/nail.mjs uninstall --target claude`. Your records remain in place. If Cursor reused those Claude skills, reinstall the standalone Cursor adapter with `node bin/nail.mjs install --target cursor`.
 2. In Claude Code, enter the command below and review the marketplace source. Choose **User** scope to keep the installation personal.
-3. Open a new chat and say **“Help me set up my performance record.”** Enable automatic tracking only for the project folders you choose.
+3. Open a new chat and say **“Help me set up my performance record.”** A new setup defaults to all folders. Ask for selected folders if you prefer.
 
 ```text
 /plugin install nail-performance-review --marketplace yaro-work/nail-performance-review
@@ -101,13 +101,19 @@ Claude may still ask before writing to your private record or opening an externa
 
 ## Enable automatic tracking for a workspace
 
-Manual skills work as soon as they are installed. Enable automatic tracking only where your AI tool may use the selected record. Use an absolute path to the workspace root.
+Your first `init` enables tracking in all folders, including subfolders. Use `init --manual` to start with manual capture or to enable only the folders you choose later. Existing settings stay in place on upgrade. Complete any hook trust steps and open a new chat.
 
-```sh
-node bin/nail.mjs tracking --enable --name work --cwd "/absolute/path/to/project"
-```
+| What you want | Run from the plugin folder |
+|---|---|
+| Track all folders with one default record. | `node bin/nail.mjs tracking --enable --all --name work` |
+| Track one exact folder or give it a different record. | `node bin/nail.mjs tracking --enable --name work --cwd "/absolute/path/to/project"` |
+| Track one folder and all its subfolders. | `node bin/nail.mjs tracking --enable --recursive --name work --cwd "/absolute/path/to/project"` |
+| Exclude a folder and its subfolders. | `node bin/nail.mjs tracking --disable --cwd "/absolute/path/to/project"` |
+| Clear a folder's override or exclusion. | `node bin/nail.mjs tracking --reset --cwd "/absolute/path/to/project"` |
+| Turn off the all-folder default. Individually enabled folders stay on. | `node bin/nail.mjs tracking --disable --all` |
+| Switch to manual capture everywhere and clear previously enabled folders. | `node bin/nail.mjs tracking --manual` |
 
-Open a new session in that workspace. Each adapter uses the same opt-in. Subdirectories, unrelated workspaces, and Cursor multi-root workspaces do not activate tracking. Use `tracking --disable --cwd "/absolute/path/to/project"` to revoke the opt-in. A repository’s `.nail.json` can select a record for manual CLI use, but cannot authorize automatic tracking.
+To switch to selected folders, turn off the all-folder default and enable the folders you want. The closest folder rule wins. A separately enabled subfolder can track inside an excluded folder. With all-folder tracking on, a Cursor window with several folders can track if all its roots use the same record. A repository’s `.nail.json` selects a record for manual use. Automatic tracking uses the private configuration.
 
 To keep only manual skills, install with `--skills-only`. If Cursor already imports your Nail skills from Claude Code, run `install --target cursor --reuse-claude-skills` after installing the Claude adapter from the same checkout. Keep Third-Party Imports enabled in Cursor. If you turn it off or uninstall Claude skills, reinstall Cursor without the reuse flag. The Cursor adapter also installs a local rule that respects startup opt-in and explicit requests.
 
@@ -183,15 +189,16 @@ Say **“Check my manager document now”** or **“Pause manager document check
 ## Upgrade or uninstall
 
 1. Close your AI tools.
-2. From the plugin folder, update the clone and refresh the installed adapters. Run each command separately.
+2. From the plugin folder, update the clone and refresh the installed adapters with one command.
 3. Reopen your AI tools and start a new chat.
 
 ```sh
-git pull --ff-only
-node bin/nail.mjs update
+node bin/nail.mjs update --pull
 ```
 
-The updater uses your existing installation choices, including manual skills and Cursor's shared Claude skills. It reports a backup path when it changes an existing settings file. If you edited an installed skill, resolve the reported conflict before retrying.
+This command updates all terminal-managed adapters. It stops if the clone has local changes or Git cannot fast-forward it. The updater keeps your installation choices, including manual skills and Cursor's shared Claude skills. It reports a backup path when it changes an existing settings file.
+
+If an older copy rejects `--pull`, run `git pull --ff-only` first, then run `node bin/nail.mjs update`. If your Claude plugin came from Claude's plugin browser, [update it in Claude](#install-through-claude-code).
 
 The updater replaces old Nail hooks it can identify. If `doctor` still reports a bare Node hook, check that hook's origin in Claude Code before removing it.
 

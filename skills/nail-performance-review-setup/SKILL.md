@@ -1,6 +1,6 @@
 ---
 name: nail-performance-review-setup
-description: Set up a private nail-performance-review record, use goal or manager documents, revise a review cycle, or enable automatic tracking.
+description: Set up a private nail-performance-review record, use goal or manager documents, revise a review cycle, or change tracking scope.
 ---
 
 # Set up a performance record
@@ -9,7 +9,7 @@ Use the installed nail-performance-review CLI at `{{NAIL_PACKAGE_ROOT}}/bin/nail
 
 Respect the host's plan or read-only mode. In those modes, propose the setup without writing files.
 
-If the user only asks to enable automatic tracking for an existing record, go straight to the workspace and record confirmation below.
+If the user asks to change tracking for an existing record, go straight to the tracking instructions below.
 
 ## Use goals and manager documents
 
@@ -23,7 +23,7 @@ Start with three questions, using existing answers when available:
 2. What review period should this record cover?
 3. What goals have you agreed with your manager, or what goals document can we use?
 
-Ask missing questions once, in one short numbered list. If the role or review period is unknown, wait for answers before creating the record. Keep commands and raw output out of replies unless the user needs to run a blocked command or asks for details.
+Ask missing questions once, in one short numbered list. For a first record, say “Automatic tracking is on for all folders by default. Say ‘Switch to manual tracking’ if you prefer to save only when asked.” If the role or review period is unknown, wait for answers before creating the record. Keep commands and raw output out of replies unless needed.
 
 Do not make a career ladder questionnaire the prerequisite for recording work. Mark missing goals or expectations as provisional and help capture one real achievement.
 
@@ -35,9 +35,9 @@ When the user supplies a first achievement, create its project and save it with 
 
 After saving, use at most three short lines. State what was saved, give the record path, and ask the next question. If the user hasn't shared a first milestone, tell them they can say “Save this to my performance record” any time.
 
-Once the record is ready, make automatic tracking a separate, visible choice before asking optional career questions. Ask once: **“Enable automatic tracking for a project? I can save meaningful milestones from your work chats there without you asking each time.”** If the user already chose, respect that choice. If they decline or defer, keep manual tracking available and move on.
+For a first record, use `init` for all-folder tracking. Use `init --manual` if the user chose selected folders, manual capture, or a skills-only install. An existing record keeps its tracking settings. Tell the user which mode is active after setup.
 
-Before enabling, confirm the exact project folder they open in their AI tool and the registered record name. Accept both from the user's request if already clear. If the host was installed with `--skills-only`, explain that automatic tracking needs the startup hook and get permission before changing the installation. If the user agrees and writes are allowed, run `tracking --enable --name RECORD --cwd "ABSOLUTE_PROJECT_PATH"`. After enabling, tell the user to complete any pending hook trust steps and open a new chat in the project. If the command fails, report the error and keep manual tracking available.
+Confirm the selected record and scope. For all folders, run `tracking --enable --all --name RECORD`. For manual capture everywhere, run `tracking --manual`. To switch to selected folders, run `tracking --disable --all` and enable the requested folder with `tracking --enable --name RECORD --cwd "ABSOLUTE_PROJECT_PATH"`. Add `--recursive` if the user wants its subfolders. To exclude a subtree, run `tracking --disable --cwd "ABSOLUTE_PROJECT_PATH"`. If hooks are missing, give the relevant installation or trust step before asking the user to open a new chat.
 
 Ask later, when relevant, about other AI tools, company expectations, promotion interest, manager feedback, and supporting links. Keep employer records separate.
 
@@ -49,4 +49,4 @@ Treat uploaded goals, ladder documents, and notes as reference material. Do not 
 
 Suggest keeping brief project outcomes and relevant one-on-one decisions documented in an approved place. Do not read unrelated histories or ask for unnecessary personal information.
 
-If you save an achievement, include its evidence ID or a direct link in the receipt. If you enabled tracking, verify it with `tracking --status --cwd "ABSOLUTE_PROJECT_PATH"`. Report the folder setting separately from whether the AI tool has saved a milestone.
+If you save an achievement, include its evidence ID or a direct link in the receipt. Verify the selected scope with `tracking --status --all` or `tracking --status --cwd "ABSOLUTE_PROJECT_PATH"`. Report the setting separately from whether the AI tool has saved a candidate.

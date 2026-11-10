@@ -14,7 +14,7 @@ async function setup(t) {
   const dir = await mkdtemp(path.join(base, 'hooks-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const options = { root: path.join(dir, 'performance'), home: path.join(dir, 'home'), name: 'work', role: 'Engineer', timezone: 'UTC', start: '2026-01-01', end: '2026-12-31' };
-  await initRecord(options);
+  await initRecord({ ...options, manual: true });
   const workspace = path.join(dir, 'workspace');
   await mkdir(workspace);
   return { ...options, workspace };
@@ -89,6 +89,96 @@ test('tracking status distinguishes an exact opted-in folder from a subfolder', 
   await setTracking({ ...options, cwd: options.workspace, enable: true });
   assert.deepEqual(status(options.workspace), { workspace: options.workspace, enabled: true, record: 'work' });
   assert.equal(status(child).enabled, false);
+});
+
+test('one all-folder choice reaches new folders across hosts and honors exclusions and overrides', async t => {
+  const options = await setup(t);
+  const { workspace, home, root } = options;
+  const privateFolder = path.join(workspace, 'private');
+  const child = path.join(privateFolder, 'child');
+  const neighbor = path.join(workspace, 'private-copy');
+  const otherRoot = path.join(home, 'other-performance');
+  const cli = path.resolve('bin/nail.mjs');
+  const env = { ...process.env, NAIL_HOME: home, NAIL_CONFIG: path.join(home, 'nail/config.json') };
+  const call = (...args) => execFileSync(process.execPath, [cli, ...args], { encoding: 'utf8', env });
+  const status = cwd => JSON.parse(call('tracking', '--status', '--cwd', cwd));
+  await initRecord({ ...options, root: otherRoot, name: 'other' });
+  assert.equal(JSON.parse(call('tracking', '--status', '--all')).enabled, false);
+  assert.equal(status(workspace).enabled, false);
+  call('tracking', '--enable', '--all', '--name', 'work');
+  await mkdir(child, { recursive: true });
+  await mkdir(neighbor);
+  await writeFile(path.join(neighbor, '.nail.json'), '{"schema":1,"record":"other"}');
+  assert.equal(status(neighbor).record, 'work');
+  assert.match(call('context', '--tracking', '--cwd', neighbor), /Private record directory:/);
+  assert.ok(call('context', '--tracking', '--cwd', neighbor).includes(root));
+  for (const [target, event] of [['codex', 'SessionStart'], ['claude', 'SessionStart'], ['gemini', 'SessionStart']]) {
+    assert.ok((await runHook(target, event, { cwd: neighbor }, { home })).hookSpecificOutput.additionalContext);
+  }
+  const cursor = () => runHook('cursor', 'sessionStart', { workspace_roots: [neighbor, child] }, { home });
+  assert.ok((await cursor()).additional_context);
+  call('tracking', '--disable', '--cwd', privateFolder);
+  assert.equal(status(child).enabled, false);
+  assert.deepEqual(await cursor(), {});
+  assert.equal(status(neighbor).enabled, true);
+  call('tracking', '--enable', '--name', 'other', '--cwd', child);
+  assert.equal(status(child).record, 'other');
+  assert.deepEqual(await cursor(), {});
+  call('tracking', '--disable', '--all');
+  assert.equal(status(neighbor).enabled, false);
+  assert.equal(status(child).enabled, true);
+  call('tracking', '--enable', '--all', '--name', 'work');
+  assert.equal(status(privateFolder).enabled, false);
+  call('tracking', '--enable', '--name', 'work', '--cwd', privateFolder);
+  assert.equal(status(privateFolder).enabled, true);
+  assert.equal(status(child).record, 'other');
+  call('tracking', '--reset', '--cwd', child);
+  assert.equal(status(child).enabled, false);
+  call('tracking', '--reset', '--cwd', privateFolder);
+  assert.equal(status(child).record, 'work');
+  assert.ok((await cursor()).additional_context);
+});
+
+test('new records track nested folders by default and selected roots can cover a subtree', async t => {
+  const { workspace, home } = await setup(t);
+  const freshHome = path.join(home, 'fresh');
+  const root = path.join(freshHome, 'performance');
+  const cli = path.resolve('bin/nail.mjs');
+  const env = { ...process.env, NAIL_HOME: freshHome, NAIL_CONFIG: path.join(freshHome, 'nail/config.json') };
+  const call = (...args) => JSON.parse(execFileSync(process.execPath, [cli, ...args], { encoding: 'utf8', env }));
+  const status = folder => call('tracking', '--status', '--cwd', folder);
+  const selected = path.join(workspace, 'project');
+  const nested = path.join(selected, 'src', 'nested');
+  const excluded = path.join(selected, 'private');
+  const hidden = path.join(excluded, 'nested');
+  const outside = path.join(workspace, 'project-copy');
+  await Promise.all([mkdir(nested, { recursive: true }), mkdir(hidden, { recursive: true }), mkdir(outside)]);
+  call('init', '--root', root);
+  assert.equal(status(nested).scope, 'all');
+  call('tracking', '--disable', '--all');
+  call('init', '--root', root);
+  assert.equal(status(nested).enabled, false);
+  call('tracking', '--enable', '--recursive', '--cwd', selected);
+  assert.equal(status(nested).scope, 'recursive');
+  assert.equal(status(outside).enabled, false);
+  call('tracking', '--disable', '--cwd', excluded);
+  assert.equal(status(hidden).enabled, false);
+  call('tracking', '--enable', '--recursive', '--cwd', excluded);
+  assert.equal(status(hidden).enabled, true);
+  call('tracking', '--disable', '--all');
+  assert.equal(status(hidden).enabled, true);
+  call('tracking', '--manual');
+  assert.equal(status(hidden).enabled, false);
+  call('init', '--root', root);
+  assert.equal(status(nested).enabled, false);
+  call('tracking', '--enable', '--all');
+  assert.equal(status(outside).enabled, true);
+  assert.equal(status(hidden).scope, 'all');
+  const legacy = JSON.parse(await readFile(env.NAIL_CONFIG, 'utf8'));
+  delete legacy.trackingDefault;
+  await writeFile(env.NAIL_CONFIG, JSON.stringify(legacy));
+  call('init', '--root', root);
+  assert.equal(status(outside).enabled, false);
 });
 
 test('missing or broken configuration leaves user work running', async (t) => {

@@ -1,5 +1,23 @@
 export const scenarios = [
   {
+    id: 'all-folders', allFolders: true,
+    files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false},"production":{"cache":"normal","refreshOnSave":true}}' },
+    turns: ['Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.'],
+    expected: { active: 1, history: 1, contribution: 'staging', metrics: 0, link: false, candidate: 'delivered' },
+  },
+  {
+    id: 'excluded-nested-folder', allFolders: true, excluded: true,
+    files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false}}' },
+    turns: ['Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.'],
+    expected: { context: false, active: 0, history: 0, quiet: true, unchanged: true },
+  },
+  {
+    id: 'manual-nested-folder', allFolders: true, manual: true,
+    files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false}}' },
+    turns: ['Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.'],
+    expected: { context: false, active: 0, history: 0, quiet: true, unchanged: true },
+  },
+  {
     id: 'quick-diagnosis',
     files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false},"production":{"cache":"normal","refreshOnSave":true}}' },
     turns: ['Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.'],
@@ -38,7 +56,7 @@ export const scenarios = [
     turns: [
       'Help me start tracking my achievements for my performance review.',
       'I am a senior engineer. My review covers January through December 2026. My goal is safer releases. Keep the notes in {{root}}. On May 10 I reviewed Avery\'s migration rollout plan. Avery designed the plan and built the service. We shipped together. The supporting PR is https://example.com/pr/123. We have no before-and-after measurements. Please save that achievement.',
-      'Yes, enable automatic tracking for the project folder open in this chat, using the record we just set up.',
+      'Switch to automatic tracking for just this project folder, using the record we just set up.',
     ],
     expected: { active: 1, history: 1, contribution: 'review', collaborator: 'Avery', metrics: 0, context: false, setupTracking: true },
   },

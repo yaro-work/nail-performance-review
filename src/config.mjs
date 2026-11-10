@@ -14,40 +14,84 @@ export async function readConfig(options = {}) {
   let config;
   try { config = JSON.parse(text); } catch { throw new Error(`Invalid configuration: ${file}`); }
   if (config?.schema !== 1 || !config.records || Array.isArray(config.records) || typeof config.records !== 'object' ||
-      (config.tracking !== undefined && (!Array.isArray(config.tracking) || config.tracking.some(item => !item || typeof item.workspace !== 'string' || !path.isAbsolute(item.workspace) || typeof item.record !== 'string')))) throw new Error(`Invalid configuration: ${file}`);
+      (config.tracking !== undefined && (!Array.isArray(config.tracking) || config.tracking.some(item => !item || typeof item.workspace !== 'string' || !path.isAbsolute(item.workspace) || typeof item.record !== 'string' ||
+        (item.recursive !== undefined && typeof item.recursive !== 'boolean')))) ||
+      (config.trackingDefault != null && typeof config.trackingDefault !== 'string') ||
+      (config.trackingExclusions !== undefined && (!Array.isArray(config.trackingExclusions) ||
+        config.trackingExclusions.some(folder => typeof folder !== 'string' || !path.isAbsolute(folder))))) throw new Error(`Invalid configuration: ${file}`);
   return config;
 }
 
 async function workspacePath(cwd) {
   if (typeof cwd !== 'string' || !path.isAbsolute(cwd)) throw new Error('Tracking requires an absolute workspace directory.');
   const workspace = await realpath(cwd);
-  if (!(await stat(workspace)).isDirectory() || path.dirname(workspace) === workspace) throw new Error('Choose a specific workspace directory.');
+  if (!(await stat(workspace)).isDirectory()) throw new Error('Choose a workspace directory.');
   return workspace;
 }
 
+function recordRoot(config, record) {
+  const root = record && Object.hasOwn(config.records, record) && config.records[record];
+  return typeof root === 'string' && path.isAbsolute(root) ? root : undefined;
+}
+
+function containsFolder(parent, workspace) {
+  const relative = path.relative(parent, workspace);
+  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
 export async function setTracking(options) {
-  const workspace = await workspacePath(options.cwd || process.cwd());
+  const workspace = options.all || options.manual ? undefined : await workspacePath(options.cwd || process.cwd());
   const file = configPath(options);
   return withLock(path.dirname(file), async () => {
     const config = await readConfig(options);
-    const tracking = (config.tracking || []).filter(item => item.workspace !== workspace);
+    let record;
     if (options.enable) {
-      const record = slug(options.name || config.default, 'record name');
-      if (!Object.hasOwn(config.records, record) || !path.isAbsolute(config.records[record])) throw new Error('Choose a registered record with --name.');
-      tracking.push({ workspace, record });
+      record = slug(options.name || config.trackingDefault || config.default, 'record name');
+      if (!recordRoot(config, record)) throw new Error('Choose a registered record with --name.');
     }
-    await atomicWrite(file, `${JSON.stringify({ ...config, tracking }, null, 2)}\n`);
-    return { enabled: Boolean(options.enable), workspace };
+    if (options.manual) {
+      config.trackingDefault = null;
+      config.tracking = [];
+    } else if (options.all) {
+      config.trackingDefault = record ?? null;
+    } else {
+      config.tracking = (config.tracking || []).filter(item => path.relative(item.workspace, workspace) !== '');
+      if (record) config.tracking.push({ workspace, record, ...(options.recursive ? { recursive: true } : {}) });
+      if (!record || options.recursive) {
+        config.trackingExclusions = (config.trackingExclusions || []).filter(folder => path.relative(folder, workspace) !== '');
+        if (!record && !options.reset) config.trackingExclusions.push(workspace);
+      }
+    }
+    await atomicWrite(file, `${JSON.stringify(config, null, 2)}\n`);
+    if (options.manual) return { mode: 'manual', enabled: false };
+    if (options.reset) return { workspace, reset: true };
+    return options.all ? { scope: 'all', enabled: Boolean(record), record } : { enabled: Boolean(record), workspace };
   });
 }
 
 export async function trackingStatus(options = {}) {
-  const workspace = await workspacePath(options.cwd || process.cwd());
   const config = await readConfig(options);
-  const record = config.tracking?.find(item => item.workspace === workspace)?.record;
-  const root = record && Object.hasOwn(config.records, record) && config.records[record];
-  return typeof root === 'string' && path.isAbsolute(root)
-    ? { workspace, enabled: true, record, root }
+  const defaultRecord = config.trackingDefault;
+  const defaultRoot = recordRoot(config, defaultRecord);
+  if (options.all) return { scope: 'all', enabled: Boolean(defaultRoot), record: defaultRoot ? defaultRecord : undefined };
+  const workspace = await workspacePath(options.cwd || process.cwd());
+  const local = config.tracking?.find(item => path.relative(item.workspace, workspace) === '');
+  if (local) {
+    const root = recordRoot(config, local.record);
+    return root ? { workspace, enabled: true, record: local.record, root } : { workspace, enabled: false };
+  }
+  const rules = [
+    ...(config.trackingExclusions || []).map(folder => ({ workspace: folder })),
+    ...(config.tracking || []).filter(item => item.recursive),
+  ];
+  const closest = rules.filter(rule => containsFolder(rule.workspace, workspace))
+    .sort((a, b) => b.workspace.length - a.workspace.length)[0];
+  if (closest) {
+    const root = recordRoot(config, closest.record);
+    return root ? { workspace, enabled: true, record: closest.record, root, scope: 'recursive' } : { workspace, enabled: false };
+  }
+  return defaultRoot
+    ? { workspace, enabled: true, record: defaultRecord, root: defaultRoot, scope: 'all' }
     : { workspace, enabled: false };
 }
 
@@ -61,6 +105,9 @@ export async function registerRoot(root, options = {}) {
     const config = await readConfig(options);
     if (config.records[name] && config.records[name] !== root) throw new Error(`Record ${name} already points elsewhere. Choose a different --name.`);
     if (Object.values(config.records).includes(root) && config.records[name] !== root) throw new Error('This directory already has another record name.');
+    if (!Object.keys(config.records).length && !Object.hasOwn(config, 'trackingDefault')) {
+      config.trackingDefault = options.manual ? null : name;
+    }
     config.records[name] = root;
     config.default ||= name;
     await atomicWrite(file, `${JSON.stringify(config, null, 2)}\n`);
