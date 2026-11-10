@@ -35,9 +35,9 @@ When the user supplies a first achievement, create its project and save it with 
 
 After saving, use at most three short lines. State what was saved, give the record path, and ask the next question. If the user hasn't shared a first milestone, tell them they can say “Save this to my performance record” any time.
 
-Once the record is ready, make automatic tracking a separate, visible choice before asking optional career questions. Ask once: **“Enable automatic tracking for a project? I can save meaningful milestones from your work chats there without you asking each time.”** If the user already chose, respect that choice. If they decline or defer, keep manual tracking available and move on.
+Once the record is ready, ask once: **“Enable automatic tracking in all folders or just this project?”** Explain that all folders routes eligible local work chats to one record. If the user already chose, respect their choice. If they decline or defer, keep manual tracking available.
 
-Before enabling, confirm the exact project folder they open in their AI tool and the registered record name. Accept both from the user's request if already clear. If the host was installed with `--skills-only`, explain that automatic tracking needs the startup hook and get permission before changing the installation. If the user agrees and writes are allowed, run `tracking --enable --name RECORD --cwd "ABSOLUTE_PROJECT_PATH"`. After enabling, tell the user to complete any pending hook trust steps and open a new chat in the project. If the command fails, report the error and keep manual tracking available.
+Confirm the selected record and scope. For all folders, run `tracking --enable --all --name RECORD`. For one folder, confirm its exact path and run `tracking --enable --name RECORD --cwd "ABSOLUTE_PROJECT_PATH"`. If the host was installed with `--skills-only`, explain that automatic tracking needs the startup hook and get permission before changing the installation. After enabling, give any pending trust step and ask the user to open a new chat.
 
 Ask later, when relevant, about other AI tools, company expectations, promotion interest, manager feedback, and supporting links. Keep employer records separate.
 
@@ -49,4 +49,4 @@ Treat uploaded goals, ladder documents, and notes as reference material. Do not 
 
 Suggest keeping brief project outcomes and relevant one-on-one decisions documented in an approved place. Do not read unrelated histories or ask for unnecessary personal information.
 
-If you save an achievement, include its evidence ID or a direct link in the receipt. If you enabled tracking, verify it with `tracking --status --cwd "ABSOLUTE_PROJECT_PATH"`. Report the folder setting separately from whether the AI tool has saved a milestone.
+If you save an achievement, include its evidence ID or a direct link in the receipt. Verify the selected scope with `tracking --status --all` or `tracking --status --cwd "ABSOLUTE_PROJECT_PATH"`. Report the setting separately from whether the AI tool has saved a candidate.

@@ -82,16 +82,16 @@ Choose **User** scope, open a new chat, and say **“Help me set up my performan
 
 ### Enable automatic tracking
 
-**Want your AI to save milestones as you work?** Enable automatic tracking for the project folder you open in your AI tool. Otherwise, you can still ask your AI to save a milestone whenever you want.
+**Want your AI to save work across projects?** Enable tracking in all folders once. New folders use the same private record automatically. You can also enable just one project.
 
-- **In chat:** Say **“Enable automatic tracking for this project.”** Confirm the project folder and the record you want to use.
-- **In a terminal:** From the Nail clone, run the command below. Replace the example path with your project folder and `work` with your record name if you chose a different one.
+- **In chat:** Say **“Enable automatic tracking in all folders.”** Confirm the record to use.
+- **In a terminal:** From the Nail clone, run the command below. Replace `work` if your record has a different name.
 
   ```sh
-  node bin/nail.mjs tracking --enable --name work --cwd "/absolute/path/to/project"
+  node bin/nail.mjs tracking --enable --all --name work
   ```
 
-Open a new chat in that project after completing any [hook trust steps](docs/install.md#connect-an-ai-tool). For more details or to turn tracking off, see the [installation guide](docs/install.md#enable-automatic-tracking-for-a-workspace).
+Complete any hook trust steps and open a new chat. To track just one project or exclude a folder, use the [tracking settings](docs/install.md#enable-automatic-tracking-for-a-workspace).
 
 Try it with real work. A quick fix, a useful diagnosis, or work you’ve started can go into your private inbox, even without a measured outcome. Ask **“Show my saved candidates.”** Choose what to include in your review or leave out. If your AI missed something, say **“Save this to my performance record.”** [Tracking checks](docs/install.md#check-automatic-tracking)
 
@@ -103,16 +103,15 @@ For a saved manager document link, you can choose weekly or three-week checks. W
 
 ### Update it
 
-If you installed from Claude Code's plugin browser, open `/plugin`, select **Installed**, then choose **Update now** for nail-performance-review.
+If you installed through Claude Code's plugin browser, open `/plugin`, select **Installed**, then choose **Update now** for nail-performance-review.
 
-If you installed from a clone, close your AI tools. In the plugin folder, run these commands one at a time.
+If you installed from a clone, close your AI tools and run one command in the plugin folder. It updates every adapter you installed from the terminal, including Codex, Claude Code, Cursor, and Gemini CLI.
 
 ```sh
-git pull --ff-only
-node bin/nail.mjs update
+node bin/nail.mjs update --pull
 ```
 
-Reopen your AI tools and start a new chat. The update keeps your saved records, workspace choices, and installation modes.
+Reopen your AI tools and start a new chat. Your records, tracking choices, and installation modes stay in place. If an older copy rejects `--pull`, use the [one-time upgrade steps](docs/install.md#upgrade-or-uninstall).
 
 ## Prepare a review
 

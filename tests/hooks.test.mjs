@@ -91,6 +91,54 @@ test('tracking status distinguishes an exact opted-in folder from a subfolder', 
   assert.equal(status(child).enabled, false);
 });
 
+test('one all-folder choice reaches new folders across hosts and honors exclusions and overrides', async t => {
+  const options = await setup(t);
+  const { workspace, home, root } = options;
+  const privateFolder = path.join(workspace, 'private');
+  const child = path.join(privateFolder, 'child');
+  const neighbor = path.join(workspace, 'private-copy');
+  const otherRoot = path.join(home, 'other-performance');
+  const cli = path.resolve('bin/nail.mjs');
+  const env = { ...process.env, NAIL_HOME: home, NAIL_CONFIG: path.join(home, 'nail/config.json') };
+  const call = (...args) => execFileSync(process.execPath, [cli, ...args], { encoding: 'utf8', env });
+  const status = cwd => JSON.parse(call('tracking', '--status', '--cwd', cwd));
+  await initRecord({ ...options, root: otherRoot, name: 'other' });
+  assert.equal(JSON.parse(call('tracking', '--status', '--all')).enabled, false);
+  assert.equal(status(workspace).enabled, false);
+  call('tracking', '--enable', '--all', '--name', 'work');
+  await mkdir(child, { recursive: true });
+  await mkdir(neighbor);
+  await writeFile(path.join(neighbor, '.nail.json'), '{"schema":1,"record":"other"}');
+  assert.equal(status(neighbor).record, 'work');
+  assert.match(call('context', '--tracking', '--cwd', neighbor), /Private record directory:/);
+  assert.ok(call('context', '--tracking', '--cwd', neighbor).includes(root));
+  for (const [target, event] of [['codex', 'SessionStart'], ['claude', 'SessionStart'], ['gemini', 'SessionStart']]) {
+    assert.ok((await runHook(target, event, { cwd: neighbor }, { home })).hookSpecificOutput.additionalContext);
+  }
+  const cursor = () => runHook('cursor', 'sessionStart', { workspace_roots: [neighbor, child] }, { home });
+  assert.ok((await cursor()).additional_context);
+  call('tracking', '--disable', '--cwd', privateFolder);
+  assert.equal(status(child).enabled, false);
+  assert.deepEqual(await cursor(), {});
+  assert.equal(status(neighbor).enabled, true);
+  call('tracking', '--enable', '--name', 'other', '--cwd', child);
+  assert.equal(status(child).record, 'other');
+  assert.deepEqual(await cursor(), {});
+  call('tracking', '--disable', '--all');
+  assert.equal(status(neighbor).enabled, false);
+  assert.equal(status(child).enabled, true);
+  call('tracking', '--enable', '--all', '--name', 'work');
+  assert.equal(status(privateFolder).enabled, false);
+  call('tracking', '--enable', '--name', 'work', '--cwd', privateFolder);
+  assert.equal(status(privateFolder).enabled, true);
+  assert.equal(status(child).record, 'other');
+  call('tracking', '--reset', '--cwd', child);
+  assert.equal(status(child).enabled, false);
+  call('tracking', '--reset', '--cwd', privateFolder);
+  assert.equal(status(child).record, 'work');
+  assert.ok((await cursor()).additional_context);
+});
+
 test('missing or broken configuration leaves user work running', async (t) => {
   const options = await setup(t);
   assert.deepEqual(await runHook('codex', 'SessionStart', {}, { root: path.join(options.root, 'missing') }), {});

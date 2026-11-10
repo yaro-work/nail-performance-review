@@ -20,15 +20,19 @@ export async function runHook(target, event, payload = {}, options = {}) {
   if ((event !== start && !promptCheck) || payload?.permission_mode === 'plan') return {};
   if (promptCheck && (typeof payload?.prompt !== 'string' || !payload.prompt.trim() ||
       payload.prompt.trimStart().startsWith('/'))) return {};
-  const cwd = roots === undefined && !cursor ? payload?.cwd :
-    Array.isArray(roots) && roots.length === 1 ? roots[0] : undefined;
-  if (typeof cwd !== 'string' || !cwd) return {};
-  const { root, workspace } = await trackingStatus({ ...options, cwd });
+  const folders = roots === undefined && !cursor ? [payload?.cwd] : roots;
+  if (!Array.isArray(folders) || !folders.length || folders.some(cwd => typeof cwd !== 'string' || !cwd)) return {};
+  const multiple = folders.length > 1;
+  if (multiple && !cursor) return {};
+  const statuses = await Promise.all(folders.map(cwd => trackingStatus({ ...options, cwd })));
+  const { root, workspace } = statuses[0];
   if (!root) return {};
+  if (multiple && (!statuses.every(status => status.root === root) ||
+      !(await trackingStatus({ ...options, all: true })).enabled)) return {};
   let text = `nail-performance-review is active for this workspace. ${capture}`;
   const sessionId = payload?.session_id ?? payload?.conversation_id;
   if (validSessionId(sessionId)) text += ` For the candidate's sessionId, use ${sessionId} (source: ${cursor ? 'cursor' : target}).`;
-  if (!promptCheck && payload?.permission_mode !== 'plan' &&
+  if (!promptCheck && !multiple &&
       managerRefreshDue(await readManagerSource(root).catch(() => null), workspace)) {
     text += ' An opted-in manager document check is due. When appropriate and writes are allowed, follow the scheduled manager document steps in the nail-performance-review-setup skill.';
   }

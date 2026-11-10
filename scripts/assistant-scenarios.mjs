@@ -1,5 +1,11 @@
 export const scenarios = [
   {
+    id: 'all-folders', allFolders: true,
+    files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false},"production":{"cache":"normal","refreshOnSave":true}}' },
+    turns: ['Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.'],
+    expected: { active: 1, history: 1, contribution: 'staging', metrics: 0, link: false, candidate: 'delivered' },
+  },
+  {
     id: 'quick-diagnosis',
     files: { 'preview-settings.json': '{"staging":{"cache":"sticky","refreshOnSave":false},"production":{"cache":"normal","refreshOnSave":true}}' },
     turns: ['Why does our staging preview keep showing stale values after a save? Look at preview-settings.json. Keep the explanation short.'],

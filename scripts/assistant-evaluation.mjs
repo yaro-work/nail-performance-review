@@ -115,14 +115,16 @@ async function runCase(base, scenario, model, executable) {
   await fs.mkdir(project, { recursive: true });
   if (scenario.initialized !== false) {
     await initRecord({ root, home, name: 'work', role: 'Senior engineer', timezone: 'UTC', start: '2026-01-01', end: '2026-12-31' });
-    if (scenario.expected.context !== false) await setTracking({ home, cwd: project, name: 'work', enable: true });
+    if (scenario.expected.context !== false) {
+      await setTracking({ home, ...(scenario.allFolders ? { all: true } : { cwd: project }), name: 'work', enable: true });
+    }
     await updateDocument(root, 'goals', { items: [{ id: 'reliability', title: 'Make releases safer' }] });
     await updateDocument(root, 'project', { id: 'migration', title: 'Service migration', goals: ['reliability'] });
   }
   if (scenario.seed) await saveEvidence(root, { eventId: 'migration-rollout', date: '2026-05-10', project: 'migration', goals: ['reliability'], source: 'codex', state: 'delivered', basis: 'reported', contribution: 'Designed the migration rollout plan.', outcome: 'The team shipped the migration.', collaborators: ['Avery'], links: ['https://example.com/pr/123'], metrics: [] });
   await install('codex', { home, root, packageRoot });
   await fs.cp(path.join(home, '.agents'), path.join(project, '.agents'), { recursive: true });
-  await write(path.join(project, '.nail.json'), JSON.stringify({ schema: 1, record: 'work' }));
+  if (!scenario.allFolders) await write(path.join(project, '.nail.json'), JSON.stringify({ schema: 1, record: 'work' }));
   await write(path.join(project, 'AGENTS.md'), `# Workspace\nWork only in this workspace and the private notes at ${root}. Nail setup may write the isolated Nail registry at ${path.join(home, 'nail/config.json')}. Do not change plugin source, use other agents, access unrelated notes, or contact external services. Use Node for local commands.\n`);
   for (const [name, content] of Object.entries(scenario.files || {})) await write(path.join(project, name), content);
   const journal = path.join(directory, 'hooks.jsonl');
