@@ -180,9 +180,10 @@ export async function updateDocument(root, name, input) {
       if (metadata.start > metadata.end) throw new Error('Review start must not follow its end.');
       file = path.join(root, 'profile.md');
     } else if (name === 'goals') {
-      if (Object.keys(input).some(key => key !== 'items') || !Array.isArray(input.items)) throw new Error('Goals require an items list.');
+      if (Object.keys(input).some(key => !['items', 'merge'].includes(key)) || !Array.isArray(input.items) ||
+          (input.merge !== undefined && typeof input.merge !== 'boolean')) throw new Error('Goals require an items list and optional merge flag.');
       const ids = new Set();
-      const items = input.items.map(item => {
+      let items = input.items.map(item => {
         object(item); slug(item.id, 'goal'); text(item.title, 'goal title', true);
         text(item.description, 'goal description');
         if (ids.has(item.id)) throw new Error('Duplicate goal identifier.');
@@ -191,8 +192,14 @@ export async function updateDocument(root, name, input) {
         return { id: item.id, title: item.title, description: item.description || '', status: item.status || 'active' };
       });
       const previous = await readDocument(root, name);
+      if (input.merge) {
+        const byId = new Map(previous.items.map(item => [item.id, item]));
+        for (const item of items) byId.set(item.id, item);
+        items = [...byId.values()];
+      }
       const referenced = new Set((await listEvidence(root, { includeSuperseded: true })).flatMap(record => record.goals));
-      for (const id of referenced) if (!ids.has(id)) throw new Error(`Goal ${id} has evidence. Keep it with completed or paused status instead of deleting it.`);
+      const updatedIds = new Set(items.map(item => item.id));
+      for (const id of referenced) if (!updatedIds.has(id)) throw new Error(`Goal ${id} has evidence. Keep it with completed or paused status instead of deleting it.`);
       if (JSON.stringify(previous.items) === JSON.stringify(items)) return previous;
       metadata = { schema: 1, type: name, version: previous.version + 1, items }; body = previous.body;
       file = path.join(root, 'goals.md');

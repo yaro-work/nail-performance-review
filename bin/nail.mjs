@@ -13,8 +13,9 @@ import { htmlReport } from '../src/report.mjs';
 import { atomicWrite, assertInside, readOptional } from '../src/storage.mjs';
 import { install, uninstall, inspectInstallations, updateInstallations } from '../src/install.mjs';
 import { runHook } from '../src/hooks.mjs';
+import { claimManagerRefresh, completeManagerRefresh, configureManagerSource, pauseManagerRefresh, readManagerSource } from '../src/manager-source.mjs';
 
-const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable [--name RECORD] | --disable | --status  Control automatic workspace tracking\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--dry-run]             Refresh all managed adapters from this checkout\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
+const help = `nail-performance-review\n\nUsage: node bin/nail.mjs COMMAND [options]\n\nCommands:\n  init                          Create or resume a private record\n  doctor                        Check data and installation capabilities\n  profile|goals|project --stdin  Update structured settings\n  record|amend --stdin           Save an achievement or correction\n  tracking --enable [--name RECORD] | --disable | --status  Control automatic workspace tracking\n  manager-source                Check manager document setup and refresh status\n  context [--project ID] [--tracking]        Load bounded shared context\n  nudge --session ID --project ID [--reason alignment|outcomes|sharing]\n  review [--period YYYY-H1]     Prepare an evidence packet for the assistant\n  report [--period YYYY-H1]     Generate an offline HTML overview\n  export --output ABS           Save a portable Markdown handoff\n  import --input ABS            Import a handoff without duplicating records\n  install|uninstall --target codex|claude|cursor|gemini|generic [--dry-run]\n  update [--dry-run]             Refresh all managed adapters from this checkout\nInstall options: --skills-only, --reuse-claude-skills (Cursor)\n\nCommon options: --root ABS, --name RECORD, --cwd PROJECT, --start YYYY-MM-DD, --end YYYY-MM-DD\nSetup options: --role ROLE, --timezone IANA, --period YYYY|YYYY-H1|YYYY-H2, --bind\nNudge actions: --action show|snooze|dismiss|approve|continue [--days 7|30]\nUse --action continue --note "response" to remember a choice to work outside goals.\nreview --output ABS saves its packet. report --output ABS selects its HTML destination.\nNo cloud service, telemetry, raw transcript collection, or automatic AI API calls.\n`;
 
 async function inputJSON() {
   let text = '';
@@ -37,7 +38,7 @@ async function main() {
     allowPositionals: true,
     options: Object.fromEntries([
       ...['root', 'name', 'cwd', 'role', 'timezone', 'level', 'start', 'end', 'period', 'project', 'session', 'reason', 'action', 'note', 'days', 'target', 'event', 'output', 'input'].map(key => [key, { type: 'string' }]),
-      ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'status', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
+      ...['stdin', 'dry-run', 'bind', 'help', 'version', 'tracking', 'enable', 'disable', 'status', 'claim', 'checked', 'skills-only', 'reuse-claude-skills'].map(key => [key, { type: 'boolean' }]),
     ]),
   });
   const [command, ...extra] = positionals;
@@ -45,7 +46,7 @@ async function main() {
   if (values.version) return console.log('0.1.0');
   if (!command || values.help) return console.log(help);
   const options = { ...values, dryRun: values['dry-run'] || false, packageRoot: path.dirname(path.dirname(fileURLToPath(import.meta.url))) };
-  if (values.stdin && !['record', 'amend', 'profile', 'goals', 'project'].includes(command)) throw new Error('--stdin is not used by this command.');
+  if (values.stdin && !['record', 'amend', 'profile', 'goals', 'project', 'manager-source'].includes(command)) throw new Error('--stdin is not used by this command.');
   let result;
   if (command === 'init') {
     if (options.period) {
@@ -70,6 +71,33 @@ async function main() {
       const { root, ...status } = await trackingStatus(options);
       result = status;
     } else result = await setTracking(options);
+  } else if (command === 'manager-source') {
+    if ((options.disable && (options.stdin || options.checked || options.claim)) ||
+        (options.claim && (options.stdin || options.checked)) || (options.checked && !options.stdin) ||
+        (options.tracking && (!options.claim || options.root || options.name))) throw new Error('Invalid manager-source options.');
+    if (options.tracking) {
+      const { root, workspace } = await trackingStatus(options);
+      result = root ? await claimManagerRefresh(root, { workspace }) : { due: false };
+    } else {
+      const root = await resolveRoot(options);
+      if (options.claim) result = await claimManagerRefresh(root);
+      else if (options.disable) result = await pauseManagerRefresh(root);
+      else if (options.checked) result = await completeManagerRefresh(root, await inputJSON());
+      else if (options.stdin) {
+        const input = await inputJSON();
+        let workspace;
+        if (input?.intervalDays) {
+          if (!options.cwd) throw new Error('Confirm a specific enabled workspace with --cwd.');
+          const status = await trackingStatus(options);
+          if (status.root !== root) throw new Error('Enable tracking for this record in the selected workspace first.');
+          workspace = status.workspace;
+        }
+        result = await configureManagerSource(root, input, workspace);
+      } else {
+        const source = await readManagerSource(root);
+        result = source ? { configured: true, intervalDays: source.intervalDays, workspace: source.workspace, lastChecked: source.lastChecked } : { configured: false };
+      }
+    }
   } else if (command === 'context' && options.tracking) {
     if (options.root || options.name) throw new Error('Tracking context uses the workspace’s authorized record.');
     const root = await trackingRoot(options.cwd || process.cwd(), options);
@@ -105,6 +133,7 @@ async function main() {
     else if (command === 'nudge') result = await nudge(root, options);
     else if (command === 'doctor') {
       result = { ...await doctor(root), installations: await inspectInstallations(options), configuration: await readConfig(options) };
+      try { await readManagerSource(root); } catch (error) { result.errors.push(`Manager source: ${error.message}`); }
       for (const installation of result.installations) {
         result.errors.push(...installation.issues, ...installation.missing.map(file => `Missing installed file: ${file}`));
       }

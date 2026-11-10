@@ -21,6 +21,8 @@ nail-performance-review's tracking workflow uses the current authorized work con
 
 Evidence can contain sensitive facts even when the original document is not copied. Review a note before sharing it.
 
+If you save a manager document link, Nail keeps it and its review checkpoint in your private performance folder. The startup message contains neither the link nor document contents. Recurring checks require separate opt-in for one workspace. The active AI tool uses its authorized connector to open the link. The Nail CLI makes no network requests.
+
 Public issues and support email can reach the maintainer. Use fictional examples when requesting help; do not send confidential career records or unnecessary personal information.
 
 ## Share a review or export

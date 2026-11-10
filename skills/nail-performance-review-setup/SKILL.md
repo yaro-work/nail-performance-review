@@ -1,6 +1,6 @@
 ---
 name: nail-performance-review-setup
-description: Set up a private nail-performance-review record, revise goals or a review cycle, or enable automatic tracking for a project.
+description: Set up a private nail-performance-review record, use goal or manager documents, revise a review cycle, or enable automatic tracking.
 ---
 
 # Set up a performance record
@@ -10,6 +10,12 @@ Use the installed nail-performance-review CLI at `{{NAIL_PACKAGE_ROOT}}/bin/nail
 Respect the host's plan or read-only mode. In those modes, propose the setup without writing files.
 
 If the user only asks to enable automatic tracking for an existing record, go straight to the workspace and record confirmation below.
+
+## Use goals and manager documents
+
+When the user shares a goals or manager document for this record, or asks to refresh a saved one, read `{{NAIL_PACKAGE_ROOT}}/references/source-review.md` from the resolved package root. Read every accessible section in order before claiming coverage. Use the complete review period to populate agreed goals and supported achievements. If a hook says a scheduled manager document check is due, follow that guide's scheduled steps. Skip the onboarding questions for an existing record.
+
+## Set up the record
 
 Start with three questions, using existing answers when available:
 
@@ -23,7 +29,7 @@ Do not make a career ladder questionnaire the prerequisite for recording work. M
 
 Resolve the record root through `context`. If no record exists, offer the default `~/performance` or the user's chosen absolute path. Explain where the notes will be stored before running `init`.
 
-Use `profile`, `goals`, and `project` with validated JSON input. Save user-provided goals with `goals --stdin` and preserve existing goals unless the user asks to change them. An initialized record alone has no goals. Read `{{NAIL_PACKAGE_ROOT}}/references/record-format.md` when preparing input. Keep personal records outside source repositories.
+Use `profile`, `goals`, and `project` with validated JSON input. Save user-provided goals with `goals --stdin`. For additions or revisions, send `{"merge":true,"items":[...]}` and reuse existing goal IDs. Read `{{NAIL_PACKAGE_ROOT}}/references/record-format.md` when preparing input. Keep personal records outside source repositories.
 
 When the user supplies a first achievement, create its project and save it with `record --stdin` using that record format. Keep this first capture within setup; do not load nail-performance-review-track just for it. Separate personal credit, collaborators, and team results. Leave unknown measurements empty.
 

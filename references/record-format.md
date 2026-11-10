@@ -57,6 +57,8 @@ A measurement contains `name`, numerical `before` and `after`, `unit`, a support
 
 Use `profile --stdin`, `goals --stdin`, and `project --stdin` for structured updates. These examples show their input shape.
 
+For goal additions or updates, add `"merge": true` alongside `items`. Include the full fields for each changed goal. Existing goals omitted from the input keep their fields and order.
+
 ```json
 {"role":"Software engineer","level":"Senior","promotion":false,"timezone":"America/New_York"}
 ```
