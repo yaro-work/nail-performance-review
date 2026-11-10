@@ -59,6 +59,11 @@ export function grade(expected, observed) {
   if (expected.quietLast) check('routine follow-up stays quiet', !/\b(achievement|performance|priorit|promotion)\b/i.test(observed.lastMessage));
   if (expected.setupTracking) {
     const turns = observed.setupTurns || [];
+    const opening = turns[0]?.assistant || '';
+    check('setup suggests optional progress notes and prior reviews', /\boptional\b|if you have/i.test(opening) &&
+      /\b1\s*[:\-–]\s*1s?\b|one-on-one/i.test(opening) && /self[- ]review/i.test(opening) &&
+      /manager.{0,50}(review|guidance|feedback)|(review|guidance|feedback).{0,50}manager/i.test(opening));
+    check('setup avoids absolute privacy promises', !/completely private|100% private|fully private/i.test(opening));
     check('user goal saved during setup', observed.goals?.some(goal => /safer releases/i.test(goal.title)));
     check('setup explains the all-folder default', /all folders/i.test(turns[1]?.assistant || ''));
     check('setup uses the default and honors the switch to one folder', turns.length === 3 &&

@@ -13,6 +13,8 @@ Use the user's requested goals, feedback, or one-on-one documents as source mate
 
 Report what was read and saved in a short receipt. Leave confidential source details out of work artifacts and ordinary replies.
 
+Use prior self-reviews and manager feedback to identify strengths, growth areas, and possible goals. Ask which priorities still apply before saving them as current goals. Keep prior-year achievements in their original review period.
+
 ## Save a manager document for later
 
 Ask before storing a private link. Ask separately whether the user wants manual checks, a weekly check, or a check every three weeks. If they choose recurring checks, confirm one workspace already enabled for the selected performance record. Explain that a check can run when they next open that workspace after it is due, using the AI tool's existing document access.
