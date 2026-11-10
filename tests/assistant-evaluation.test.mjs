@@ -27,6 +27,12 @@ test('read-only writes and noisy routine edits fail', () => {
   assert.equal(grade({ active: 0, history: 0, unchanged: true }, observed).status, 'fail');
   assert.equal(grade({ active: 0, history: 0, quiet: true }, observed).status, 'fail');
 });
+test('a local file link does not count as a performance interruption', () => {
+  const observed = { ...observation(), active: [], history: [], messages: 'Updated [release-notes.md](<F:/AI Lab/nail-session-safety/workspace/release-notes.md>).'};
+  const criteria = { active: 0, history: 0, quiet: true };
+  assert.equal(grade(criteria, observed).status, 'pass');
+  assert.equal(grade(criteria, { ...observed, messages: observed.messages + ' Saved a Nail achievement.' }).status, 'fail');
+});
 test('correct evidence and native delivery pass while incomplete turns fail', () => {
   assert.equal(grade(expected, observation()).status, 'pass');
   assert.equal(grade(expected, { ...observation(), completed: false }).status, 'fail');

@@ -37,7 +37,10 @@ export function grade(expected, observed) {
   }
   if (expected.correction) check('correction preserves original', observed.active[0]?.supersedes === observed.history.find(r => !r.supersedes)?.id);
   if (expected.packet) check('review packet read through CLI', observed.commandResults.some(c => c.exitCode === 0 && /nail\.mjs/.test(c.command) && /\breview\b/.test(c.command) && c.output.includes('# Self-review evidence packet') && observed.active.every(r => c.output.includes(r.id))));
-  if (expected.quiet) check('no performance interruption', !/\b(nail|achievement|performance record|career|promotion)\b/i.test(observed.messages));
+  if (expected.quiet) {
+    const visibleText = observed.messages.replace(/\]\(<[^>\r\n]*>\)|\]\([^\)\r\n]*\)/g, ']');
+    check('no performance interruption', !/\b(nail|achievement|performance record|career|promotion)\b/i.test(visibleText));
+  }
   if (expected.unchanged) check('read-only record unchanged', observed.before === observed.after);
   if (expected.priorityDecision) {
     check('user choice saved without inventing a goal', observed.priorityDecisions?.length === 1 && /value the community/i.test(observed.priorityDecisions[0].body) && observed.goals?.length === 1);
